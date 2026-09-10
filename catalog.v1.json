@@ -1,7 +1,7 @@
 {
   "$schema": "https://apps.bridgething.com/schemas/catalog/v1.json",
   "schema": "catalog.v1",
-  "updated_at": "2026-09-10T02:05:38.520Z",
+  "updated_at": "2026-09-10T02:26:28.549Z",
   "repo": {
     "name": "Bridgething Calendar",
     "description": "Calendar for the Spotify Car Thing: month view, agenda, countdown, one-tap meeting join.",
@@ -22,6 +22,20 @@
       "homepage": "https://github.com/dharmapoudel/bridgething-calendar",
       "source": "https://github.com/dharmapoudel/bridgething-calendar",
       "versions": [
+        {
+          "version": "0.1.1",
+          "released_at": "2026-09-10T02:26:28.384Z",
+          "download": {
+            "url": "https://dharmapoudel.github.io/bridgething-calendar-source/r/01a0890e-4a23-7000-bd4e-439997d71981/0.1.1.zip",
+            "size": 893295,
+            "sha256": "53f925002a13d7ab9c31ed8df251961007f84fff60f68bed0b232200f802b2dd"
+          },
+          "permissions": [
+            "net.fetch"
+          ],
+          "min_libbridgething_version": "0.12.1",
+          "changelog": null
+        },
         {
           "version": "0.1.0",
           "released_at": "2026-09-10T02:05:38.516Z",
