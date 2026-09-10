@@ -1,10 +1,10 @@
 {
   "$schema": "https://apps.bridgething.com/schemas/catalog/v1.json",
   "schema": "catalog.v1",
-  "updated_at": "2026-09-10T02:48:23.360Z",
+  "updated_at": "2026-09-10T03:04:50.838Z",
   "repo": {
     "name": "Bridgething Calendar",
-    "description": "Calendar for the Spotify Car Thing: month view, agenda, countdown, one-tap meeting join.",
+    "description": "Calendar for the Spotify Car Thing: month view, agenda, and a next-event countdown.",
     "homepage": "https://github.com/dharmapoudel/bridgething-calendar-source",
     "icon": null
   },
@@ -12,7 +12,7 @@
     {
       "id": "01a0890e-4a23-7000-bd4e-439997d71981",
       "name": "Calendar",
-      "description": "Your calendars on your Car Thing. Month view, agenda, next-event countdown, and one-tap join for meetings.",
+      "description": "Your calendars on your Car Thing. Month view, agenda, and a next-event countdown.",
       "author": "Dharma Poudel",
       "icon": "https://dharmapoudel.github.io/bridgething-calendar-source/icons/01a0890e-4a23-7000-bd4e-439997d71981.png",
       "screenshots": [
@@ -22,6 +22,25 @@
       "homepage": "https://github.com/dharmapoudel/bridgething-calendar",
       "source": "https://github.com/dharmapoudel/bridgething-calendar",
       "versions": [
+        {
+          "version": "0.1.3",
+          "released_at": "2026-09-10T03:04:50.662Z",
+          "download": {
+            "url": "https://dharmapoudel.github.io/bridgething-calendar-source/r/01a0890e-4a23-7000-bd4e-439997d71981/0.1.3.zip",
+            "size": 902714,
+            "sha256": "3a5c7d378223ece3eb293476ddce3e0a08e7dc62cf5f0d6a54c7a9770d91b45a"
+          },
+          "settings": {
+            "url": "https://dharmapoudel.github.io/bridgething-calendar-source/s/01a0890e-4a23-7000-bd4e-439997d71981/0.1.3.html",
+            "size": 16762,
+            "sha256": "eabfddc304bc6603ed55a2990bf87d9573da8fcef42d28acc92927006be3dae2"
+          },
+          "permissions": [
+            "net.fetch"
+          ],
+          "min_libbridgething_version": "0.12.1",
+          "changelog": null
+        },
         {
           "version": "0.1.2",
           "released_at": "2026-09-10T02:48:22.916Z",
