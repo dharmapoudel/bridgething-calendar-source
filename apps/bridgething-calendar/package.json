@@ -1,0 +1,35 @@
+{
+  "dependencies": {
+    "preact": "^10.29.7",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0",
+    "@bridgething/client": "^0.12.1"
+  },
+  "devDependencies": {
+    "@msgpack/msgpack": "^3.1.3",
+    "@preact/preset-vite": "^2.10.5",
+    "@tailwindcss/vite": "^4.3.3",
+    "@types/react": "^19.2.10",
+    "@types/react-dom": "^19.2.3",
+    "@vitejs/plugin-react": "^6.1.1",
+    "fflate": "^0.8.2",
+    "tailwindcss": "^4.3.3",
+    "typescript": "^6.0.3",
+    "vite": "^8.2.2",
+    "vite-plugin-singlefile": "^2.3.3"
+  },
+  "name": "bridgething-calendar",
+  "private": true,
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "dev:device": "vite --mode device",
+    "preview": "vite preview",
+    "push": "bun scripts/push.ts",
+    "share": "bun scripts/share.ts",
+    "typecheck": "tsc --noEmit -p tsconfig.json",
+    "update": "bunx @bridgething/updater"
+  },
+  "type": "module",
+  "version": "0.1.0"
+}
