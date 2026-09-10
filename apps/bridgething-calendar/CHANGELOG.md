@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.1.2 — 2026-09-10
+
+- Fixed the clock: time now renders in the phone's timezone (the device has no timezone of its own), and the daemon clock re-syncs every minute
+- Event times and day buckets also follow the phone's timezone now
+- Larger month title and larger date numbers
+- Month grid only renders the weeks it needs (5 rows for September 2026 instead of a padded 6th)
+- Smoother animations: direction-aware month slide, softer panel easing, event detail pops in
+
 ## 0.1.1 — 2026-09-09
 
 - Removed the persistent CALENDAR header for a cleaner top bar

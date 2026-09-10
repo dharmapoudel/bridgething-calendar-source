@@ -48,7 +48,9 @@
   --text-body: 0.875rem;
   --text-row: 0.9375rem;
   --text-row-lg: 1.0625rem;
+  --text-date: 1.375rem;
   --text-title: 1.25rem;
+  --text-month: 1.5rem;
   --text-hero: 1.375rem;
   --text-screen-title: 2.125rem;
 
@@ -80,5 +82,90 @@
     margin: 0;
     overflow: hidden;
     overscroll-behavior: none;
+  }
+}
+
+/* Fluid, GPU-friendly motion: transform + opacity only, one shared easing. */
+@keyframes month-in-next {
+  from {
+    opacity: 0;
+    transform: translateX(32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes month-in-prev {
+  from {
+    opacity: 0;
+    transform: translateX(-32px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes month-in-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes modal-pop {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+@keyframes backdrop-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+.month-in-next {
+  animation: month-in-next 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+.month-in-prev {
+  animation: month-in-prev 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+.month-in-fade {
+  animation: month-in-fade 200ms ease-out;
+}
+
+.modal-backdrop-in {
+  animation: backdrop-in 180ms ease-out;
+}
+
+.modal-pop {
+  animation: modal-pop 220ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .month-in-next,
+  .month-in-prev,
+  .month-in-fade,
+  .modal-backdrop-in,
+  .modal-pop {
+    animation: none;
   }
 }

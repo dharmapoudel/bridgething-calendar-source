@@ -1,14 +1,20 @@
 // Unit tests for ics.ts and model.ts. Run: bun tests/run.ts
 // (also worth running under TZ=Australia/Sydney to catch TZ bugs)
-import { expandFeedEvents, FEED_COLORS, type FeedSource } from '../src/ics';
+import { expandFeedEvents, FEED_COLORS, toLocalIso, toZonedIso, type FeedSource } from '../src/ics';
 import {
   formatCountdown,
+  formatKeyHeading,
+  formatTimeRange,
   isJoinableNow,
   isoWeek,
   meetingUrlFor,
   monthGrid,
   nextEventToday,
   shouldAnnounce,
+  todayKeyFor,
+  zonedParts,
+  zonedWallToMs,
+  zoneOffsetMs,
 } from '../src/model';
 
 let passed = 0;
@@ -27,6 +33,9 @@ const W0 = Date.UTC(2026, 0, 1);
 const W1 = Date.UTC(2027, 0, 1);
 function expand(text: string) {
   return expandFeedEvents(text, feed, W0, W1).events;
+}
+function expandTz(text: string, timeZone: string) {
+  return expandFeedEvents(text, feed, W0, W1, timeZone).events;
 }
 const wrap = (body: string) =>
   `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//test//test//EN\r\nX-WR-CALNAME:Work\r\n${body}END:VCALENDAR\r\n`;
@@ -161,10 +170,13 @@ const wrap = (body: string) =>
 {
   check('isoWeek known', isoWeek(2026, 8, 10) === 37, isoWeek(2026, 8, 10));
   const grid = monthGrid(2026, 8, 1, '2026-09-10', {});
-  check('grid is 6x7', grid.length === 6 && grid.every(w => w.days.length === 7));
+  check('sep 2026 renders 5 rows, no padded 6th', grid.length === 5 && grid.every(w => w.days.length === 7), grid.length);
   check('sep 1 2026 is a Tuesday', grid[0].days[1].day === 1 && grid[0].days[1].inMonth);
+  check('last row still touches month', grid[4].days.some(d => d.inMonth && d.day === 30));
   const todayCell = grid.flatMap(w => w.days).find(d => d.key === '2026-09-10');
   check('today flagged', todayCell?.today === true);
+  const aug = monthGrid(2026, 7, 1, '2026-08-10', {});
+  check('aug 2026 genuinely spans 6 rows', aug.length === 6, aug.length);
 }
 {
   const mk = (start: string, title: string, allDay = false) => ({
@@ -186,6 +198,46 @@ const wrap = (body: string) =>
   const joinable = { ...evts[1], meetingUrl: 'https://meet.google.com/x' };
   check('joinable in window', isJoinableNow(joinable, nowMs + 20 * 60000, '2026-09-10') === true);
   check('not joinable far out', isJoinableNow(joinable, nowMs + 60 * 60000, '2026-09-10') === false);
+}
+
+// ---- phone-timezone wall clock
+{
+  // 2026-03-10T01:30:00Z is 2026-03-09 21:30 in New York (EDT, UTC-4)
+  const ms = Date.UTC(2026, 2, 10, 1, 30, 0);
+  const p = zonedParts(ms, 'America/New_York');
+  check('zonedParts date', p.year === 2026 && p.month === 3 && p.day === 9, p);
+  check('zonedParts time', p.hour === 21 && p.minute === 30 && p.weekday === 1, p);
+  check('todayKeyFor uses zone', todayKeyFor(ms, 'America/New_York') === '2026-03-09');
+  check('zoneOffsetMs EDT', zoneOffsetMs(ms, 'America/New_York') === -4 * 3600000);
+  const iso = toZonedIso(ms, 'America/New_York');
+  check('toZonedIso round-trips instant', Date.parse(iso) === ms, iso);
+  check('toZonedIso carries zone offset', iso === '2026-03-09T21:30:00-04:00', iso);
+  check('toZonedIso without zone falls back', toZonedIso(ms, undefined) === toLocalIso(ms));
+  check('zonedWallToMs round trip', zonedWallToMs(2026, 3, 9, 21, 30, 'America/New_York') === ms);
+  // DST spring-forward: 2026-03-08 02:30 does not exist in New York; the
+  // iteration still lands on a sane instant that day.
+  const spring = zonedWallToMs(2026, 3, 8, 2, 30, 'America/New_York');
+  check('zonedWallToMs DST gap sane', todayKeyFor(spring, 'America/New_York') === '2026-03-08', new Date(spring).toISOString());
+  const heading = formatKeyHeading('2026-09-09');
+  check('formatKeyHeading', heading === 'Wednesday, September 9', heading);
+}
+{
+  // Same instant bucketed on Mar 9 in New York instead of Mar 10 (UTC).
+  const evts = expandTz(wrap(
+    'BEGIN:VEVENT\r\nUID:tz1\r\nDTSTART:20260310T013000Z\r\nDTEND:20260310T023000Z\r\nSUMMARY:Late call\r\nEND:VEVENT\r\n',
+  ), 'America/New_York');
+  check('zoned day bucketing', evts.length === 1 && evts[0].dateKey === '2026-03-09', evts[0]?.dateKey);
+  check('zoned start keeps zone offset', evts[0]?.start === '2026-03-09T21:30:00-04:00', evts[0]?.start);
+  const ev = { ...evts[0], id: '1', calendarId: 'c', calendarName: 'C', color: '#fff', title: 'Late call', location: '' };
+  const range = formatTimeRange(ev, 'America/New_York');
+  check('formatTimeRange in phone zone', range === '9:30 PM – 10:30 PM', range);
+}
+{
+  // Without a zone the pipeline keeps its old device-local behavior.
+  const evts = expand(wrap(
+    'BEGIN:VEVENT\r\nUID:tz2\r\nDTSTART:20260310T013000Z\r\nDTEND:20260310T023000Z\r\nSUMMARY:Late call\r\nEND:VEVENT\r\n',
+  ));
+  check('no-zone pipeline still works', evts.length === 1 && typeof evts[0].dateKey === 'string');
 }
 
 console.log(`\n${passed} passed, ${failed} failed`);

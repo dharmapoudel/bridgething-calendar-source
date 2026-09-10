@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { deviceNowMs, fetchText, getConfig, onConfigChanged } from './client';
+import { deviceTime, fetchText, getConfig, onConfigChanged } from './client';
 import { FEED_COLORS, loadFeeds } from './ics';
 import {
   calendarsInDocument,
-  dateFromKey,
+  dateKey,
   eventsForDateKey,
   formatCountdown,
+  formatKeyHeading,
   formatTimeRange,
   indexEventsByDate,
   isDeclined,
@@ -18,10 +19,12 @@ import {
   shouldAnnounce,
   stepMonth,
   syncState,
+  todayKeyFor,
   toggleHiddenCalendar,
   truncateTitle,
   visibleEvents,
   weekdayOrder,
+  zonedParts,
 } from './model';
 import type { CalEvent } from './model';
 import { getHiddenCalendars, setHiddenCalendars } from './store';
@@ -92,6 +95,7 @@ export default function App() {
   const [syncedAtMs, setSyncedAtMs] = useState<number | null>(null);
   const [refreshing, setRefreshing] = useState(false);
   const [now, setNow] = useState(() => Date.now());
+  const [timeZone, setTimeZone] = useState<string | undefined>(undefined);
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
   const [selectedKey, setSelectedKey] = useState(() => keyForDate(new Date()));
@@ -100,6 +104,10 @@ export default function App() {
   const [panelOpen, setPanelOpen] = useState(false);
   const configRef = useRef<AppConfig | null>(null);
   configRef.current = config;
+  const timeZoneRef = useRef<string | undefined>(undefined);
+  timeZoneRef.current = timeZone;
+  const interactedRef = useRef(false);
+  const navDirRef = useRef<'next' | 'prev' | 'fade'>('fade');
   const swipeStartX = useRef<number | null>(null);
 
   const loadConfig = useCallback(async () => {
@@ -134,6 +142,7 @@ export default function App() {
         feeds,
         nowMs - 200 * 86400000,
         nowMs + 400 * 86400000,
+        timeZoneRef.current,
       );
       setEvents(evts);
       setErrors(errs);
@@ -145,18 +154,50 @@ export default function App() {
     }
   }, []);
 
-  // boot: config, device clock, live config updates
+  // boot: config, device clock, live config updates.
+  // The phone is the time authority (the device has no battery-backed
+  // clock): both the instant and the IANA zone come from the daemon, so the
+  // clock renders in the user's timezone instead of the device's (UTC).
+  // The offset is re-synced every minute so drift never accumulates.
   useEffect(() => {
     loadConfig();
-    deviceNowMs().then(deviceMs => {
-      const offset = deviceMs - Date.now();
-      setNow(Date.now() + offset);
-      const tick = window.setInterval(() => setNow(Date.now() + offset), 10000);
-      return () => window.clearInterval(tick);
-    });
+    let alive = true;
+    const offsetRef = { current: 0 };
+    const pullClock = (first: boolean) => {
+      deviceTime().then(t => {
+        if (!alive) return;
+        offsetRef.current = t.ms - Date.now();
+        setTimeZone(t.timeZone);
+        setNow(Date.now() + offsetRef.current);
+        if (first && !interactedRef.current) {
+          const p = zonedParts(t.ms, t.timeZone);
+          setViewYear(p.year);
+          setViewMonth(p.month - 1);
+          setSelectedKey(dateKey(p.year, p.month - 1, p.day));
+        }
+      });
+    };
+    pullClock(true);
+    const tick = window.setInterval(() => setNow(Date.now() + offsetRef.current), 10000);
+    const resync = window.setInterval(() => pullClock(false), 60000);
     const off = onConfigChanged(() => loadConfig());
-    return off;
+    return () => {
+      alive = false;
+      window.clearInterval(tick);
+      window.clearInterval(resync);
+      off();
+    };
   }, [loadConfig]);
+
+  // The first feed load usually races the daemon clock; once the phone's
+  // timezone is known, re-expand so day buckets and times use it.
+  const tzAppliedRef = useRef(false);
+  useEffect(() => {
+    if (timeZone !== undefined && !tzAppliedRef.current && config && config.feeds.length > 0) {
+      tzAppliedRef.current = true;
+      loadFeedsNow(config);
+    }
+  }, [timeZone, config, loadFeedsNow]);
 
   // fetch when feeds become known; poll on the refresh interval
   useEffect(() => {
@@ -174,7 +215,7 @@ export default function App() {
     [events, hidden],
   );
   const index = useMemo(() => indexEventsByDate(visible), [visible]);
-  const todayKey = useMemo(() => keyForDate(new Date(now)), [now]);
+  const todayKey = useMemo(() => todayKeyFor(now, timeZone), [now, timeZone]);
   const grid = useMemo(
     () => monthGrid(viewYear, viewMonth, config?.weekStart ?? 1, todayKey, index),
     [viewYear, viewMonth, config, todayKey, index],
@@ -196,16 +237,20 @@ export default function App() {
   const state = syncState(syncedAtMs, now, (config?.refreshMinutes ?? 15) * 60);
 
   const goMonth = useCallback((delta: number) => {
+    interactedRef.current = true;
+    navDirRef.current = delta > 0 ? 'next' : 'prev';
     const { year, month } = stepMonth(viewYear, viewMonth, delta);
     setViewYear(year);
     setViewMonth(month);
   }, [viewYear, viewMonth]);
 
   const goToday = useCallback(() => {
-    const d = new Date(now);
-    setViewYear(d.getFullYear());
-    setViewMonth(d.getMonth());
-    setSelectedKey(keyForDate(d));
+    interactedRef.current = true;
+    navDirRef.current = 'fade';
+    const p = zonedParts(now, timeZoneRef.current);
+    setViewYear(p.year);
+    setViewMonth(p.month - 1);
+    setSelectedKey(dateKey(p.year, p.month - 1, p.day));
   }, [now]);
 
   const toggleCalendar = useCallback((id: string) => {
@@ -247,13 +292,9 @@ export default function App() {
   const clockText = new Date(now).toLocaleTimeString(undefined, {
     hour: 'numeric',
     minute: '2-digit',
+    ...(timeZone ? { timeZone } : {}),
   });
-  const selectedDate = dateFromKey(selectedKey, new Date(now));
-  const selectedHeading = selectedDate.toLocaleDateString(undefined, {
-    weekday: 'long',
-    month: 'long',
-    day: 'numeric',
-  });
+  const selectedHeading = formatKeyHeading(selectedKey);
 
   if (!config) {
     return (
@@ -270,6 +311,7 @@ export default function App() {
   const gridCols = config.showWeekNumbers ? 'grid-cols-[2rem_repeat(7,1fr)]' : 'grid-cols-7';
 
   const onDayClick = (key: string) => {
+    interactedRef.current = true;
     if (!panelPinned && key === selectedKey) {
       setPanelOpen(v => !v);
     } else {
@@ -277,6 +319,13 @@ export default function App() {
       if (!panelPinned) setPanelOpen(true);
     }
   };
+
+  const navAnimClass =
+    navDirRef.current === 'next'
+      ? 'month-in-next'
+      : navDirRef.current === 'prev'
+        ? 'month-in-prev'
+        : 'month-in-fade';
 
   // Swipe left/right on the month grid steps months.
   const onTouchStart = (e: React.TouchEvent) => {
@@ -301,7 +350,7 @@ export default function App() {
           >
             ‹
           </button>
-          <div className="min-w-36 text-center font-display text-title font-medium">
+          <div className="min-w-36 text-center font-display text-month font-medium">
             {MONTH_NAMES[viewMonth]} {viewYear}
           </div>
           <button
@@ -375,7 +424,11 @@ export default function App() {
               </div>
             ))}
           </div>
-          <div className="grid min-h-0 flex-1 grid-rows-6 gap-1">
+          <div
+            key={`${viewYear}-${viewMonth}`}
+            className={`grid min-h-0 flex-1 gap-1 ${navAnimClass}`}
+            style={{ gridTemplateRows: `repeat(${grid.length}, minmax(0, 1fr))` }}
+          >
             {grid.map((week, wi) => (
               <div key={wi} className={`grid min-h-0 ${gridCols} gap-1`}>
                 {config.showWeekNumbers && (
@@ -398,7 +451,7 @@ export default function App() {
                       } ${day.inMonth ? '' : 'opacity-35'} active:bg-neutral-soft`}
                     >
                       <span
-                        className={`font-display text-row-lg leading-none font-medium ${
+                        className={`font-display text-date leading-none font-medium ${
                           day.today ? 'text-accent' : 'text-near'
                         }`}
                       >
@@ -452,7 +505,7 @@ export default function App() {
           className={
             panelPinned
               ? 'flex w-72 shrink-0 flex-col border-l border-rule bg-screen'
-              : `absolute inset-y-0 right-0 z-[5] flex w-72 flex-col border-l border-rule bg-screen shadow-2xl transition-transform duration-200 ease-out ${
+              : `absolute inset-y-0 right-0 z-[5] flex w-72 flex-col border-l border-rule bg-screen shadow-2xl transition-transform duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
                   panelVisible ? 'translate-x-0' : 'translate-x-full'
                 }`
           }
@@ -489,6 +542,7 @@ export default function App() {
                     event={ev}
                     now={now}
                     todayKey={todayKey}
+                    timeZone={timeZone}
                     onOpen={() => setDetail(ev)}
                   />
                 ))}
@@ -510,11 +564,11 @@ export default function App() {
       {/* event detail modal */}
       {detail && (
         <div
-          className="absolute inset-0 z-10 grid place-items-center bg-black/70 p-8"
+          className="modal-backdrop-in absolute inset-0 z-10 grid place-items-center bg-black/70 p-8"
           onClick={() => setDetail(null)}
         >
           <div
-            className="flex max-h-full w-[480px] flex-col rounded border border-edge bg-bg p-5"
+            className="modal-pop flex max-h-full w-[480px] flex-col rounded border border-edge bg-bg p-5"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center gap-2">
@@ -529,7 +583,7 @@ export default function App() {
             <div className="mt-2 font-display text-hero font-medium leading-tight">
               {detail.title}
             </div>
-            <div className="mt-1 font-mono text-body text-accent">{formatTimeRange(detail)}</div>
+            <div className="mt-1 font-mono text-body text-accent">{formatTimeRange(detail, timeZone)}</div>
             {detail.location && (
               <div className="mt-1 font-body text-body text-dim">{detail.location}</div>
             )}
@@ -558,11 +612,13 @@ function EventRow({
   event,
   now,
   todayKey,
+  timeZone,
   onOpen,
 }: {
   event: CalEvent;
   now: number;
   todayKey: string;
+  timeZone: string | undefined;
   onOpen: () => void;
 }) {
   const declined = isDeclined(event);
@@ -584,7 +640,7 @@ function EventRow({
             {event.title}
           </div>
           <div className="truncate font-mono text-hint text-dim">
-            {event.allDay ? 'All day' : formatTimeRange(event)}
+            {event.allDay ? 'All day' : formatTimeRange(event, timeZone)}
             {event.location ? ` · ${event.location}` : ''}
           </div>
         </button>

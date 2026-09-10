@@ -7,7 +7,7 @@ export interface CalEvent {
   calendarId: string;
   calendarName: string;
   color: string;
-  dateKey: string; // YYYY-MM-DD in device-local time
+  dateKey: string; // YYYY-MM-DD in the phone's timezone
   start: string; // ISO-8601 with numeric offset, parseable by Date.parse
   end: string;
   allDay: boolean;
@@ -57,6 +57,109 @@ const WEEKDAY_NAMES = [
 export function pad2(value: number): string {
   const n = Math.floor(Math.abs(value));
   return (n < 10 ? '0' : '') + n;
+}
+
+// ---------------------------------------------------------------------------
+// Timezone-aware wall-clock fields.
+//
+// The Car Thing does not know the user's timezone (no battery-backed clock;
+// the phone is the time authority), so every wall-clock read goes through
+// the IANA zone the daemon reports. When timeZone is undefined we fall back
+// to the runtime's local zone (simulator / dev).
+// ---------------------------------------------------------------------------
+
+export interface ZonedParts {
+  year: number;
+  month: number; // 1-12
+  day: number;
+  hour: number;
+  minute: number;
+  second: number;
+  weekday: number; // 0 = Sunday
+}
+
+const partsFormatterCache = new Map<string, Intl.DateTimeFormat>();
+
+function partsFormatter(timeZone: string): Intl.DateTimeFormat {
+  let f = partsFormatterCache.get(timeZone);
+  if (!f) {
+    f = new Intl.DateTimeFormat('en-US', {
+      timeZone,
+      year: 'numeric',
+      month: 'numeric',
+      day: 'numeric',
+      hour: 'numeric',
+      minute: 'numeric',
+      second: 'numeric',
+      hour12: false,
+    });
+    partsFormatterCache.set(timeZone, f);
+  }
+  return f;
+}
+
+export function zonedParts(ms: number, timeZone: string | undefined): ZonedParts {
+  if (!timeZone) {
+    const d = new Date(ms);
+    return {
+      year: d.getFullYear(),
+      month: d.getMonth() + 1,
+      day: d.getDate(),
+      hour: d.getHours(),
+      minute: d.getMinutes(),
+      second: d.getSeconds(),
+      weekday: d.getDay(),
+    };
+  }
+  const parts = partsFormatter(timeZone).formatToParts(new Date(ms));
+  const get = (type: string): number => {
+    const v = parts.find(p => p.type === type)?.value;
+    return v === undefined ? 0 : parseInt(v, 10);
+  };
+  const year = get('year');
+  const month = get('month');
+  const day = get('day');
+  return {
+    year,
+    month,
+    day,
+    hour: get('hour') % 24, // hour12:false can yield "24" at midnight
+    minute: get('minute'),
+    second: get('second'),
+    weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
+  };
+}
+
+/** "YYYY-MM-DD" for the instant in the given zone — the zone-aware today key. */
+export function todayKeyFor(ms: number, timeZone: string | undefined): string {
+  const p = zonedParts(ms, timeZone);
+  return dateKey(p.year, p.month - 1, p.day);
+}
+
+/** Offset to add to a UTC instant to get wall time in the zone, in ms. */
+export function zoneOffsetMs(ms: number, timeZone: string): number {
+  const p = zonedParts(ms, timeZone);
+  const wallAsUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  return wallAsUtc - Math.floor(ms / 1000) * 1000;
+}
+
+/** Instant of a wall-clock time in the zone (iterated: converges across DST). */
+export function zonedWallToMs(
+  year: number,
+  month1: number,
+  day: number,
+  hour: number,
+  minute: number,
+  timeZone: string,
+): number {
+  const wallUtc = Date.UTC(year, month1 - 1, day, hour, minute);
+  let guess = wallUtc;
+  for (let i = 0; i < 3; i++) {
+    const next = wallUtc - zoneOffsetMs(guess, timeZone);
+    if (next === guess) break;
+    guess = next;
+  }
+  return guess;
 }
 
 // Stable "yyyy-MM-dd" identity for a day, built from local fields so the key
@@ -152,6 +255,10 @@ export function monthGrid(
       });
       cursor.setDate(cursor.getDate() + 1);
     }
+    // Stop after the last week that touches the month: no padded 6th row.
+    // A month that genuinely spans six weeks (e.g. Aug 2026, Mon-first) still
+    // gets all six; September 2026 renders five.
+    if (!days.some(d => d.inMonth)) break;
     // Number every row by the ISO week owning its Thursday.
     const anchor = thursday ?? { year: days[0].year, month: days[0].month, day: days[0].day };
     weeks.push({ week: isoWeek(anchor.year, anchor.month, anchor.day), days });
@@ -420,17 +527,38 @@ export function syncState(
   return nowMs - syncedAtMs > thresholdMs ? 'stale' : 'ok';
 }
 
-// "9:30 AM" / "2:05 PM" style, locale aware.
-export function formatTime(iso: string): string {
+// "9:30 AM" / "2:05 PM" style, in the phone's timezone when known.
+export function formatTime(iso: string, timeZone?: string): string {
   const ms = Date.parse(iso);
   if (Number.isNaN(ms)) return '';
-  return new Date(ms).toLocaleTimeString(undefined, { hour: 'numeric', minute: '2-digit' });
+  return new Date(ms).toLocaleTimeString(undefined, {
+    hour: 'numeric',
+    minute: '2-digit',
+    ...(timeZone ? { timeZone } : {}),
+  });
 }
 
-export function formatTimeRange(event: CalEvent): string {
+export function formatTimeRange(event: CalEvent, timeZone?: string): string {
   if (event.allDay) return 'All day';
-  const s = formatTime(event.start);
-  const e = formatTime(event.end);
+  const s = formatTime(event.start, timeZone);
+  const e = formatTime(event.end, timeZone);
   if (!s) return '';
   return e && e !== s ? `${s} – ${e}` : s;
+}
+
+// "Wednesday, September 9" for a YYYY-MM-DD key, rendered via UTC so the
+// date can never shift with the device's timezone.
+export function formatKeyHeading(key: string): string {
+  const parts = String(key || '').split('-');
+  if (parts.length !== 3) return key;
+  const year = parseInt(parts[0], 10);
+  const month = parseInt(parts[1], 10);
+  const day = parseInt(parts[2], 10);
+  if (Number.isNaN(year) || Number.isNaN(month) || Number.isNaN(day)) return key;
+  return new Date(Date.UTC(year, month - 1, day)).toLocaleDateString(undefined, {
+    timeZone: 'UTC',
+    weekday: 'long',
+    month: 'long',
+    day: 'numeric',
+  });
 }

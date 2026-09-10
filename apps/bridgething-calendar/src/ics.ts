@@ -7,7 +7,7 @@
 // The fetch itself is injected so this stays testable without the bridgething
 // client: the app wires it to client.net.fetch.
 
-import { dateKey, pad2, safeUrl } from './model';
+import { dateKey, pad2, safeUrl, zonedParts, zonedWallToMs, zoneOffsetMs } from './model';
 import type { CalEvent } from './model';
 
 export interface FeedSource {
@@ -501,9 +501,43 @@ export function toLocalIso(ms: number): string {
   );
 }
 
+// ISO-8601 with the numeric offset of the phone's timezone at that instant,
+// so the stored string round-trips to the exact instant and renders in the
+// user's wall time. Falls back to device-local when the zone is unknown.
+export function toZonedIso(ms: number, timeZone: string | undefined): string {
+  if (!timeZone) return toLocalIso(ms);
+  const p = zonedParts(ms, timeZone);
+  const offMin = Math.round(zoneOffsetMs(ms, timeZone) / 60000);
+  const sign = offMin >= 0 ? '+' : '-';
+  const abs = Math.abs(offMin);
+  return (
+    `${p.year}-${pad2(p.month)}-${pad2(p.day)}` +
+    `T${pad2(p.hour)}:${pad2(p.minute)}:${pad2(p.second)}` +
+    `${sign}${pad2(Math.floor(abs / 60))}:${pad2(abs % 60)}`
+  );
+}
+
 function localDateKey(ms: number): string {
   const d = new Date(ms);
   return dateKey(d.getFullYear(), d.getMonth(), d.getDate());
+}
+
+// Day identity in the phone's timezone.
+function zonedDateKey(ms: number, timeZone: string | undefined): string {
+  if (!timeZone) return localDateKey(ms);
+  const p = zonedParts(ms, timeZone);
+  return dateKey(p.year, p.month - 1, p.day);
+}
+
+// Start-of-day instant for the day containing ms, in the phone's timezone.
+function zonedDayStart(ms: number, timeZone: string | undefined): number {
+  if (!timeZone) {
+    const d = new Date(ms);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  const p = zonedParts(ms, timeZone);
+  return zonedWallToMs(p.year, p.month, p.day, 0, 0, timeZone);
 }
 
 interface Occurrence {
@@ -596,8 +630,9 @@ function expandEvent(
 
 // One CalEvent per day spanned, so dots, agenda, and counts all work without
 // special-casing multi-day events downstream. All-day events are pinned to
-// their wall-clock dates; timed events split on device-local day boundaries.
-function occurrencesToEvents(occ: Occurrence, feed: FeedSource): CalEvent[] {
+// their wall-clock dates; timed events split on the phone-timezone's day
+// boundaries.
+function occurrencesToEvents(occ: Occurrence, feed: FeedSource, timeZone: string | undefined): CalEvent[] {
   const raw = occ.raw;
   const events: CalEvent[] = [];
   const meetingUrl = meetingUrlFor(raw);
@@ -609,8 +644,8 @@ function occurrencesToEvents(occ: Occurrence, feed: FeedSource): CalEvent[] {
     calendarName: feed.name,
     color: feed.color,
     dateKey: key,
-    start: toLocalIso(startMs),
-    end: toLocalIso(endMs),
+    start: toZonedIso(startMs, timeZone),
+    end: toZonedIso(endMs, timeZone),
     allDay: occ.allDay,
     title: raw.summary || '(untitled)',
     location: raw.location,
@@ -624,21 +659,22 @@ function occurrencesToEvents(occ: Occurrence, feed: FeedSource): CalEvent[] {
   if (occ.allDay) {
     for (let i = 0; i < occ.durationDays; i++) {
       const dt = addWallDays(occ.wallYear, occ.wallMonth, occ.wallDay, i);
-      const dayStart = new Date(dt.year, dt.month - 1, dt.day).getTime();
+      const dayStart = timeZone
+        ? zonedWallToMs(dt.year, dt.month, dt.day, 0, 0, timeZone)
+        : new Date(dt.year, dt.month - 1, dt.day).getTime();
       events.push(make(dateKey(dt.year, dt.month - 1, dt.day), dayStart, dayStart + 86400000, i));
     }
     return events;
   }
 
-  const startDay = new Date(occ.startMs);
-  startDay.setHours(0, 0, 0, 0);
-  const endDay = new Date(Math.max(occ.startMs, occ.endMs - 1));
-  endDay.setHours(0, 0, 0, 0);
-  const dayCount = Math.round((endDay.getTime() - startDay.getTime()) / 86400000) + 1;
+  const startDay = zonedDayStart(occ.startMs, timeZone);
+  const endDay = zonedDayStart(Math.max(occ.startMs, occ.endMs - 1), timeZone);
+  const dayCount = Math.round((endDay - startDay) / 86400000) + 1;
 
   for (let i = 0; i < dayCount; i++) {
-    const dayMs = startDay.getTime() + i * 86400000;
-    events.push(make(localDateKey(dayMs), occ.startMs, occ.endMs, i));
+    // Re-derive midnight after stepping so 23/25-hour DST days stay exact.
+    const dayMs = zonedDayStart(startDay + i * 86400000, timeZone);
+    events.push(make(zonedDateKey(dayMs, timeZone), occ.startMs, occ.endMs, i));
   }
   return events;
 }
@@ -697,12 +733,14 @@ export interface ParseResult {
 }
 
 // Full pipeline for one feed: parse, expand recurrences inside the window,
-// normalize. Window bounds are absolute ms.
+// normalize. Window bounds are absolute ms. timeZone is the phone's IANA
+// zone for wall-clock rendering; undefined keeps device-local behavior.
 export function expandFeedEvents(
   text: string,
   feed: FeedSource,
   windowStartMs: number,
   windowEndMs: number,
+  timeZone?: string,
 ): ParseResult {
   const { raws, calName, errors } = parseRaws(text);
   const resolvedFeed: FeedSource = { ...feed, name: calName || feed.name };
@@ -727,7 +765,7 @@ export function expandFeedEvents(
   for (const base of bases) {
     const occs = expandEvent(base, overrides.get(base.uid) ?? new Map(), windowStartMs, windowEndMs);
     for (const occ of occs) {
-      events.push(...occurrencesToEvents(occ, resolvedFeed));
+      events.push(...occurrencesToEvents(occ, resolvedFeed, timeZone));
     }
   }
   events.sort((a, b) => (a.start < b.start ? -1 : a.start > b.start ? 1 : 0));
@@ -739,6 +777,7 @@ export async function loadFeeds(
   feeds: FeedSource[],
   windowStartMs: number,
   windowEndMs: number,
+  timeZone?: string,
 ): Promise<{ events: CalEvent[]; errors: string[] }> {
   const events: CalEvent[] = [];
   const errors: string[] = [];
@@ -750,7 +789,7 @@ export async function loadFeeds(
       return;
     }
     try {
-      const expanded = expandFeedEvents(result.value, feed, windowStartMs, windowEndMs);
+      const expanded = expandFeedEvents(result.value, feed, windowStartMs, windowEndMs, timeZone);
       events.push(...expanded.events);
       errors.push(...expanded.errors.map(e => `${feed.name}: ${e}`));
     } catch (e) {

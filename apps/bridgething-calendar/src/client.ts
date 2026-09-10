@@ -80,11 +80,55 @@ class DaemonVerdict extends Error {}
 // Device wall clock, falling back to the local clock when the daemon is not
 // reachable (simulator / dev).
 export async function deviceNowMs(): Promise<number> {
+  return (await deviceTime()).ms;
+}
+
+export interface DeviceTime {
+  /** True instant in ms. The device has no battery-backed clock, so the
+   * phone (via the daemon) is the time authority. */
+  ms: number;
+  /** IANA zone from the phone for *displaying* wall time. Undefined when the
+   * daemon is unreachable, in which case the runtime's local zone applies. */
+  timeZone: string | undefined;
+}
+
+/** Full time info from the daemon: instant + the phone's timezone. */
+export async function deviceTime(): Promise<DeviceTime> {
   try {
     const t = await getClient().time.get({ timeoutMs: 8000 });
-    if (t.ok && t.response.time.wallClockUnixS) return t.response.time.wallClockUnixS * 1000;
+    if (t.ok) {
+      const info = t.response.time;
+      const ms = info.wallClockUnixS ? info.wallClockUnixS * 1000 : Date.now();
+      return { ms, timeZone: resolveTimeZone(info) };
+    }
   } catch {
     // fall through
   }
-  return Date.now();
+  return { ms: Date.now(), timeZone: undefined };
+}
+
+// The daemon docs say: read the zone from tzIana; when it is null, use
+// utcOffsetMinutes plus dstOffsetMinutes.
+function resolveTimeZone(info: {
+  tzIana: string | null;
+  utcOffsetMinutes: number | null;
+  dstOffsetMinutes: number | null;
+}): string | undefined {
+  if (info.tzIana) {
+    try {
+      // Validate: an unknown zone must not crash formatting later.
+      new Intl.DateTimeFormat('en-US', { timeZone: info.tzIana });
+      return info.tzIana;
+    } catch {
+      // fall through to the numeric offset
+    }
+  }
+  const offMin = (info.utcOffsetMinutes ?? 0) + (info.dstOffsetMinutes ?? 0);
+  if (offMin % 60 === 0) {
+    const hours = offMin / 60;
+    if (hours === 0) return 'Etc/UTC';
+    // Etc/GMT signs are inverted: Etc/GMT+5 means UTC-5.
+    return `Etc/GMT${hours > 0 ? '-' : '+'}${Math.abs(hours)}`;
+  }
+  return undefined;
 }
