@@ -31,6 +31,8 @@ interface AppConfig {
   weekStart: number;
   countdownMinutes: number;
   refreshMinutes: number;
+  showWeekNumbers: boolean;
+  showEventPanel: boolean;
 }
 
 const WEEKDAY_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
@@ -44,6 +46,8 @@ function parseConfig(raw: {
   weekStart: string | null;
   countdown: string | null;
   refresh: string | null;
+  showWeekNumbers: string | null;
+  showEventPanel: string | null;
 }): AppConfig {
   const feeds = (raw.feeds || '')
     .split('\n')
@@ -52,7 +56,17 @@ function parseConfig(raw: {
   const weekStart = (raw.weekStart || '').trim().toLowerCase() === 'sunday' ? 0 : 1;
   const countdownMinutes = clampInt(raw.countdown, 30, 5, 180);
   const refreshMinutes = clampInt(raw.refresh, 15, 5, 120);
-  return { feeds, weekStart, countdownMinutes, refreshMinutes };
+  const showWeekNumbers = parseBool(raw.showWeekNumbers, true);
+  const showEventPanel = parseBool(raw.showEventPanel, true);
+  return { feeds, weekStart, countdownMinutes, refreshMinutes, showWeekNumbers, showEventPanel };
+}
+
+function parseBool(raw: string | null, fallback: boolean): boolean {
+  if (raw === null || raw === undefined) return fallback;
+  const s = String(raw).trim().toLowerCase();
+  if (s === 'true' || s === '1' || s === 'yes') return true;
+  if (s === 'false' || s === '0' || s === 'no') return false;
+  return fallback;
 }
 
 function clampInt(raw: string | null, fallback: number, min: number, max: number): number {
@@ -83,20 +97,25 @@ export default function App() {
   const [selectedKey, setSelectedKey] = useState(() => keyForDate(new Date()));
   const [hidden, setHidden] = useState<string[]>(() => getHiddenCalendars());
   const [detail, setDetail] = useState<CalEvent | null>(null);
+  const [panelOpen, setPanelOpen] = useState(false);
   const configRef = useRef<AppConfig | null>(null);
   configRef.current = config;
+  const swipeStartX = useRef<number | null>(null);
 
   const loadConfig = useCallback(async () => {
     // URL params override companion config (testing, kiosk setups).
     const params = new URLSearchParams(window.location.search);
     const paramFeeds = params.get('ics_feeds');
-    const [feeds, weekStart, countdown, refresh] = await Promise.all([
-      paramFeeds ?? getConfig('ics_feeds'),
-      params.get('week_start') ?? getConfig('week_start'),
-      params.get('countdown_minutes') ?? getConfig('countdown_minutes'),
-      params.get('refresh_minutes') ?? getConfig('refresh_minutes'),
-    ]);
-    setConfig(parseConfig({ feeds, weekStart, countdown, refresh }));
+    const [feeds, weekStart, countdown, refresh, showWeekNumbers, showEventPanel] =
+      await Promise.all([
+        paramFeeds ?? getConfig('ics_feeds'),
+        params.get('week_start') ?? getConfig('week_start'),
+        params.get('countdown_minutes') ?? getConfig('countdown_minutes'),
+        params.get('refresh_minutes') ?? getConfig('refresh_minutes'),
+        params.get('show_week_numbers') ?? getConfig('show_week_numbers'),
+        params.get('show_event_panel') ?? getConfig('show_event_panel'),
+      ]);
+    setConfig(parseConfig({ feeds, weekStart, countdown, refresh, showWeekNumbers, showEventPanel }));
   }, []);
 
   const loadFeedsNow = useCallback(async (cfg: AppConfig) => {
@@ -212,7 +231,10 @@ export default function App() {
       if (e.key === 'ArrowRight') goMonth(1);
       else if (e.key === 'ArrowLeft') goMonth(-1);
       else if (e.key === 't' || e.key === 'T') goToday();
-      else if (e.key === 'Escape') setDetail(null);
+      else if (e.key === 'Escape') {
+        if (detail) setDetail(null);
+        else setPanelOpen(false);
+      }
     };
     window.addEventListener('wheel', onWheel, { passive: false });
     window.addEventListener('keydown', onKey);
@@ -241,11 +263,36 @@ export default function App() {
     );
   }
 
+  // Event panel: pinned in the layout when the setting is on, otherwise a
+  // slide-over that opens when a date is tapped.
+  const panelPinned = config.showEventPanel;
+  const panelVisible = panelPinned || panelOpen;
+  const gridCols = config.showWeekNumbers ? 'grid-cols-[2rem_repeat(7,1fr)]' : 'grid-cols-7';
+
+  const onDayClick = (key: string) => {
+    if (!panelPinned && key === selectedKey) {
+      setPanelOpen(v => !v);
+    } else {
+      setSelectedKey(key);
+      if (!panelPinned) setPanelOpen(true);
+    }
+  };
+
+  // Swipe left/right on the month grid steps months.
+  const onTouchStart = (e: React.TouchEvent) => {
+    swipeStartX.current = e.touches[0].clientX;
+  };
+  const onTouchEnd = (e: React.TouchEvent) => {
+    if (swipeStartX.current === null) return;
+    const dx = e.changedTouches[0].clientX - swipeStartX.current;
+    swipeStartX.current = null;
+    if (Math.abs(dx) > 48) goMonth(dx < 0 ? 1 : -1);
+  };
+
   return (
     <div className="flex h-full w-full flex-col bg-bg text-off-white">
       {/* header */}
       <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-rule px-4">
-        <div className="font-display text-xl font-bold tracking-display">CALENDAR</div>
         <div className="flex items-center gap-1">
           <button
             onClick={() => goMonth(-1)}
@@ -309,11 +356,16 @@ export default function App() {
       )}
 
       {/* body */}
-      <div className="flex min-h-0 flex-1">
+      <div className="relative flex min-h-0 flex-1">
         {/* month grid */}
-        <main className="flex min-w-0 flex-1 flex-col px-3 py-2">
-          <div className="grid shrink-0 grid-cols-[2rem_repeat(7,1fr)] gap-1">
-            <div />
+        <main
+          className="flex min-w-0 flex-1 flex-col px-3 py-2"
+          style={{ touchAction: 'pan-y' }}
+          onTouchStart={onTouchStart}
+          onTouchEnd={onTouchEnd}
+        >
+          <div className={`grid shrink-0 ${gridCols} gap-1`}>
+            {config.showWeekNumbers && <div />}
             {weekdayOrder(config.weekStart).map(wd => (
               <div
                 key={wd}
@@ -325,16 +377,18 @@ export default function App() {
           </div>
           <div className="grid min-h-0 flex-1 grid-rows-6 gap-1">
             {grid.map((week, wi) => (
-              <div key={wi} className="grid min-h-0 grid-cols-[2rem_repeat(7,1fr)] gap-1">
-                <div className="flex items-center justify-center font-mono text-hint text-dim">
-                  {week.week}
-                </div>
+              <div key={wi} className={`grid min-h-0 ${gridCols} gap-1`}>
+                {config.showWeekNumbers && (
+                  <div className="flex items-center justify-center font-mono text-hint text-dim">
+                    {week.week}
+                  </div>
+                )}
                 {week.days.map(day => {
                   const selected = day.key === selectedKey;
                   return (
                     <button
                       key={day.key}
-                      onClick={() => setSelectedKey(day.key)}
+                      onClick={() => onDayClick(day.key)}
                       className={`relative flex min-h-0 flex-col items-center justify-center rounded border px-1 ${
                         selected
                           ? 'border-accent bg-accent-soft'
@@ -383,7 +437,7 @@ export default function App() {
                   >
                     <span
                       className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: cal.color || '#888' }}
+                      style={{ backgroundColor: cal.color || '#6c7086' }}
                     />
                     {cal.name}
                   </button>
@@ -394,12 +448,31 @@ export default function App() {
         </main>
 
         {/* agenda */}
-        <aside className="flex w-72 shrink-0 flex-col border-l border-rule bg-screen">
-          <div className="shrink-0 border-b border-rule px-3 py-2">
-            <div className="font-mono text-eyebrow uppercase tracking-[0.2em] text-dim">
-              {selectedKey === todayKey ? 'Today' : 'Selected day'}
+        <aside
+          className={
+            panelPinned
+              ? 'flex w-72 shrink-0 flex-col border-l border-rule bg-screen'
+              : `absolute inset-y-0 right-0 z-[5] flex w-72 flex-col border-l border-rule bg-screen shadow-2xl transition-transform duration-200 ease-out ${
+                  panelVisible ? 'translate-x-0' : 'translate-x-full'
+                }`
+          }
+        >
+          <div className="flex shrink-0 items-center border-b border-rule px-3 py-2">
+            <div className="min-w-0 flex-1">
+              <div className="font-mono text-eyebrow uppercase tracking-[0.2em] text-dim">
+                {selectedKey === todayKey ? 'Today' : 'Selected day'}
+              </div>
+              <div className="truncate font-display text-title font-medium">{selectedHeading}</div>
             </div>
-            <div className="font-display text-title font-medium">{selectedHeading}</div>
+            {!panelPinned && (
+              <button
+                onClick={() => setPanelOpen(false)}
+                aria-label="Close event panel"
+                className="ml-2 shrink-0 rounded px-2 py-1 font-mono text-body text-dim active:bg-neutral-soft"
+              >
+                ✕
+              </button>
+            )}
           </div>
           <div className="min-h-0 flex-1 overflow-y-auto">
             {config.feeds.length === 0 ? (
@@ -447,7 +520,7 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span
                 className="h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: detail.color || '#888' }}
+                style={{ backgroundColor: detail.color || '#6c7086' }}
               />
               <div className="font-mono text-eyebrow uppercase tracking-[0.2em] text-dim">
                 {detail.calendarName}
@@ -500,7 +573,7 @@ function EventRow({
       <div className="flex items-center gap-2 px-3 py-2">
         <span
           className="h-8 w-1 shrink-0 rounded-full"
-          style={{ backgroundColor: event.color || '#888' }}
+          style={{ backgroundColor: event.color || '#6c7086' }}
         />
         <button className="min-w-0 flex-1 text-left" onClick={onOpen}>
           <div

@@ -17,23 +17,24 @@
 }
 
 @theme {
-  --color-off-white: #efefef;
-  --color-bg: #0a0c0e;
-  --color-screen: #060809;
-  --color-fg: #efefef;
-  --color-muted: #a7adb5;
-  --color-accent: #00a8e8;
-  --color-ok: #3ddc84;
-  --color-err: #dc3d3d;
-  --color-warn: #ff7070;
-  --color-experimental: #ffb066;
+  /* Catppuccin Mocha — the Omarchy default theme */
+  --color-off-white: #cdd6f4;
+  --color-bg: #1e1e2e;
+  --color-screen: #181825;
+  --color-fg: #cdd6f4;
+  --color-muted: #a6adc8;
+  --color-accent: #89b4fa;
+  --color-ok: #a6e3a1;
+  --color-err: #f38ba8;
+  --color-warn: #fab387;
+  --color-experimental: #fab387;
 
-  --color-rule: color-mix(in srgb, var(--color-fg) 10%, transparent);
-  --color-rule-strong: color-mix(in srgb, var(--color-fg) 15%, transparent);
-  --color-edge: color-mix(in srgb, var(--color-fg) 25%, transparent);
-  --color-dim: color-mix(in srgb, var(--color-fg) 35%, transparent);
-  --color-soft: color-mix(in srgb, var(--color-fg) 55%, transparent);
-  --color-near: color-mix(in srgb, var(--color-fg) 80%, transparent);
+  --color-rule: #313244;
+  --color-rule-strong: #45475a;
+  --color-edge: #585b70;
+  --color-dim: #6c7086;
+  --color-soft: #9399b2;
+  --color-near: #bac2de;
 
   --color-accent-soft: color-mix(in srgb, var(--color-accent) 14%, transparent);
   --color-ok-soft: color-mix(in srgb, var(--color-ok) 14%, transparent);

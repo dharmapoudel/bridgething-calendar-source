@@ -18,14 +18,14 @@ export interface FeedSource {
 
 // Google-style calendar colors, one per feed.
 export const FEED_COLORS = [
-  '#00a8e8', // blue
-  '#3ddc84', // green
-  '#ff7070', // red
-  '#ffb066', // orange
-  '#b388ff', // purple
-  '#4dd0e1', // teal
-  '#f06292', // pink
-  '#ffd54f', // yellow
+  '#89b4fa', // blue
+  '#a6e3a1', // green
+  '#f38ba8', // red
+  '#fab387', // peach
+  '#cba6f7', // mauve
+  '#94e2d5', // teal
+  '#f5c2e7', // pink
+  '#f9e2af', // yellow
 ];
 
 interface WallDateTime {

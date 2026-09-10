@@ -1,1 +1,69 @@
-{"config": [{"data": {"key": "ics_feeds", "label": "iCalendar feed URLs (one per line)"}, "type": "string"}, {"data": {"choices": ["sunday", "monday"], "default": "monday", "key": "week_start", "label": "Week starts on"}, "type": "enum"}, {"data": {"default": 30, "key": "countdown_minutes", "label": "Announce events starting within (minutes)", "max": 180, "min": 5, "step": 5}, "type": "number"}, {"data": {"default": 15, "key": "refresh_minutes", "label": "Refresh feeds every (minutes)", "max": 120, "min": 5, "step": 5}, "type": "number"}], "description": "Your calendars on your Car Thing. Month view, agenda, next-event countdown, and one-tap join for meetings.", "icon": "icon.png", "id": "01a0890e-4a23-7000-bd4e-439997d71981", "name": "Calendar", "permissions": ["net.fetch"], "version": "0.1.0"}
+{
+  "config": [
+    {
+      "data": {
+        "key": "ics_feeds",
+        "label": "iCalendar feed URLs (one per line)"
+      },
+      "type": "string"
+    },
+    {
+      "data": {
+        "choices": [
+          "sunday",
+          "monday"
+        ],
+        "default": "monday",
+        "key": "week_start",
+        "label": "Week starts on"
+      },
+      "type": "enum"
+    },
+    {
+      "type": "boolean",
+      "data": {
+        "key": "show_week_numbers",
+        "label": "Show week numbers",
+        "default": true
+      }
+    },
+    {
+      "type": "boolean",
+      "data": {
+        "key": "show_event_panel",
+        "label": "Show event panel",
+        "default": true
+      }
+    },
+    {
+      "data": {
+        "default": 30,
+        "key": "countdown_minutes",
+        "label": "Announce events starting within (minutes)",
+        "max": 180,
+        "min": 5,
+        "step": 5
+      },
+      "type": "number"
+    },
+    {
+      "data": {
+        "default": 15,
+        "key": "refresh_minutes",
+        "label": "Refresh feeds every (minutes)",
+        "max": 120,
+        "min": 5,
+        "step": 5
+      },
+      "type": "number"
+    }
+  ],
+  "description": "Your calendars on your Car Thing. Month view, agenda, next-event countdown, and one-tap join for meetings.",
+  "icon": "icon.png",
+  "id": "01a0890e-4a23-7000-bd4e-439997d71981",
+  "name": "Calendar",
+  "permissions": [
+    "net.fetch"
+  ],
+  "version": "0.1.1"
+}
