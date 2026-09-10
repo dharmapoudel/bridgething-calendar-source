@@ -1,6 +1,6 @@
 # Calendar for Bridgething
 
-Your calendars on the Spotify Car Thing. Month view, agenda, next-event countdown, and one-tap join for meetings — powered by plain iCalendar (ICS) feeds, so it works with Google Calendar, Apple Calendar, Nextcloud, or anything that publishes an `.ics` URL.
+Your calendars on the Spotify Car Thing. Month view, agenda, and a next-event countdown — powered by plain iCalendar (ICS) feeds, so it works with Google Calendar, Apple Calendar, Nextcloud, or anything that publishes an `.ics` URL.
 
 ![Calendar month view](screenshots/01-month.png)
 

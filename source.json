@@ -1,1 +1,8 @@
-{"base_url":"https://dharmapoudel.github.io/bridgething-calendar-source","description":"Calendar for the Spotify Car Thing: month view, agenda, countdown, one-tap meeting join.","homepage":"https://github.com/dharmapoudel/bridgething-calendar-source","icon":null,"name":"Bridgething Calendar","recommended_sources":[]}
+{
+  "base_url": "https://dharmapoudel.github.io/bridgething-calendar-source",
+  "description": "Calendar for the Spotify Car Thing: month view, agenda, and a next-event countdown.",
+  "homepage": "https://github.com/dharmapoudel/bridgething-calendar-source",
+  "icon": null,
+  "name": "Bridgething Calendar",
+  "recommended_sources": []
+}

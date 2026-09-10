@@ -3,7 +3,7 @@
     {
       "data": {
         "key": "ics_feeds",
-        "label": "iCalendar feed URLs (one per line)"
+        "label": "Calendar feeds"
       },
       "type": "string"
     },
@@ -58,12 +58,13 @@
       "type": "number"
     }
   ],
-  "description": "Your calendars on your Car Thing. Month view, agenda, next-event countdown, and one-tap join for meetings.",
+  "description": "Your calendars on your Car Thing. Month view, agenda, and a next-event countdown.",
   "icon": "icon.png",
+  "settings": "settings.html",
   "id": "01a0890e-4a23-7000-bd4e-439997d71981",
   "name": "Calendar",
   "permissions": [
     "net.fetch"
   ],
-  "version": "0.1.2"
+  "version": "0.1.3"
 }

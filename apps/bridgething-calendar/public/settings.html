@@ -1,0 +1,476 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="color-scheme" content="dark" />
+  <title>Calendar settings</title>
+  <style>
+    :root {
+      --bg: #1e1e2e;
+      --screen: #181825;
+      --fg: #cdd6f4;
+      --near: #bac2de;
+      --dim: #6c7086;
+      --accent: #89b4fa;
+      --ok: #a6e3a1;
+      --err: #f38ba8;
+      --rule: #313244;
+      --edge: #585b70;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--bg);
+      color: var(--fg);
+      font-family: system-ui, -apple-system, "Segoe UI", sans-serif;
+      line-height: 1.5;
+      -webkit-text-size-adjust: 100%;
+    }
+    main { max-width: 600px; margin: 0 auto; padding: 20px 16px 120px; }
+    h1 { font-size: 1.3rem; margin: 0; }
+    .sub { color: var(--dim); font-size: 0.85rem; margin: 2px 0 20px; }
+    section { margin-bottom: 26px; }
+    section > h2 {
+      font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.12em;
+      color: var(--dim); margin: 0 0 10px;
+    }
+    .hint { color: var(--dim); font-size: 0.85rem; margin: 0 0 10px; }
+    .card {
+      background: var(--screen);
+      border: 1px solid var(--rule);
+      border-radius: 12px;
+      padding: 12px;
+    }
+    .feed-row { display: flex; gap: 8px; margin-bottom: 8px; }
+    .feed-row:last-child { margin-bottom: 0; }
+    .feed-row input { flex: 1; min-width: 0; }
+    input[type="text"], input[type="url"], input[type="number"], input[type="password"], select {
+      width: 100%;
+      padding: 12px;
+      font-size: 1rem;
+      color: var(--fg);
+      background: var(--bg);
+      border: 1px solid var(--edge);
+      border-radius: 10px;
+    }
+    input:focus, select:focus, button:focus-visible {
+      outline: 2px solid var(--accent);
+      outline-offset: 1px;
+    }
+    input.invalid { border-color: var(--err); }
+    .icon-btn {
+      flex: 0 0 48px;
+      border: 1px solid var(--edge);
+      background: var(--bg);
+      color: var(--dim);
+      border-radius: 10px;
+      font-size: 1.3rem;
+      line-height: 1;
+      cursor: pointer;
+    }
+    .icon-btn:active { background: var(--rule); }
+    .add-btn {
+      width: 100%;
+      margin-top: 4px;
+      padding: 12px;
+      border: 1px dashed var(--edge);
+      border-radius: 10px;
+      background: transparent;
+      color: var(--accent);
+      font-size: 1rem;
+      cursor: pointer;
+    }
+    .add-btn:active { background: var(--rule); }
+    .row-err { color: var(--err); font-size: 0.85rem; margin: 6px 0 0; display: none; }
+    .row-err.show { display: block; }
+    .field { margin-bottom: 14px; }
+    .field label { display: block; font-size: 0.9rem; font-weight: 600; margin-bottom: 6px; }
+    .check-row { display: flex; align-items: center; gap: 12px; padding: 12px; }
+    .check-row input[type="checkbox"] { width: 24px; height: 24px; accent-color: var(--accent); }
+    .check-row label { margin: 0; font-weight: 500; }
+    .bar {
+      position: fixed; left: 0; right: 0; bottom: 0;
+      padding: 12px 16px calc(12px + env(safe-area-inset-bottom));
+      background: rgba(24, 24, 37, 0.96);
+      border-top: 1px solid var(--rule);
+      backdrop-filter: blur(8px);
+    }
+    .bar-inner { max-width: 600px; margin: 0 auto; display: flex; gap: 10px; }
+    .btn {
+      flex: 1; padding: 14px; font-size: 1rem; font-weight: 600;
+      border-radius: 12px; border: 1px solid var(--edge); cursor: pointer;
+    }
+    .btn-primary { background: var(--accent); border-color: var(--accent); color: #11111b; }
+    .btn-primary:active { opacity: 0.85; }
+    .btn-primary:disabled { opacity: 0.5; }
+    .btn-secondary { background: transparent; color: var(--near); }
+    .btn-secondary:active { background: var(--rule); }
+    .status { text-align: center; font-size: 0.85rem; min-height: 1.4em; margin-top: 8px; color: var(--dim); }
+    .status.ok { color: var(--ok); }
+    .status.err { color: var(--err); }
+    .loading { text-align: center; color: var(--dim); padding: 60px 20px; }
+    .spinner {
+      width: 28px; height: 28px; margin: 0 auto 12px;
+      border: 3px solid var(--rule); border-top-color: var(--accent);
+      border-radius: 50%; animation: spin 0.8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <main id="app">
+    <div class="loading" id="loading">
+      <div class="spinner"></div>
+      <div>Loading settings…</div>
+    </div>
+  </main>
+  <div class="bar" id="bar" hidden>
+    <div class="bar-inner">
+      <button class="btn btn-secondary" id="doneBtn" type="button">Done</button>
+      <button class="btn btn-primary" id="saveBtn" type="button">Save</button>
+    </div>
+    <div class="status" id="status"></div>
+  </div>
+
+<script>
+(function () {
+  'use strict';
+
+  // ---------- settings bridge ----------
+  var nextId = 1;
+  var pending = new Map();
+  var hostKind = null; // 'webview' | 'frame' | null
+
+  function detectHost() {
+    if (window.ReactNativeWebView) return 'webview';
+    if (window.parent !== window) return 'frame';
+    return null;
+  }
+
+  function deliver(json) {
+    var msg;
+    try { msg = JSON.parse(json); } catch (e) { return; }
+    if (msg && msg.event === 'docChanged') return;
+    if (!msg || typeof msg.id !== 'number') return;
+    var p = pending.get(msg.id);
+    if (!p) return;
+    pending.delete(msg.id);
+    clearTimeout(p.timer);
+    if (msg.ok) p.resolve(msg.value);
+    else p.reject(new Error(msg.error || 'request failed'));
+  }
+  window.__bridgethingSettingsDeliver = deliver;
+  window.addEventListener('message', function (e) {
+    if (e.source !== window.parent || e.source === window) return;
+    if (typeof e.data === 'string') deliver(e.data);
+  });
+
+  function send(verb, payload) {
+    return new Promise(function (resolve, reject) {
+      var kind = hostKind || detectHost();
+      if (!kind) {
+        reject(new Error('not running inside a bridgething settings host'));
+        return;
+      }
+      hostKind = kind;
+      var id = nextId++;
+      var timer = setTimeout(function () {
+        if (pending.delete(id)) reject(new Error("settings call '" + verb + "' timed out"));
+      }, 15000);
+      pending.set(id, { resolve: resolve, reject: reject, timer: timer });
+      var text = JSON.stringify({ id: id, verb: verb, payload: payload || {} });
+      try {
+        if (kind === 'webview') window.ReactNativeWebView.postMessage(text);
+        else window.parent.postMessage(text, '*');
+      } catch (err) {
+        pending.delete(id);
+        clearTimeout(timer);
+        reject(err);
+      }
+    });
+  }
+
+  function done() {
+    var text = JSON.stringify({ id: nextId++, verb: 'done' });
+    if (window.ReactNativeWebView) window.ReactNativeWebView.postMessage(text);
+    else if (window.parent !== window) window.parent.postMessage(text, '*');
+  }
+
+  // ---------- demo mode (?demo=1): stub host for local testing ----------
+  var DEMO_FIELDS = [
+    { type: 'string', data: { key: 'ics_feeds', label: 'Calendar feeds' } },
+    { type: 'enum', data: { key: 'week_start', label: 'Week starts on', choices: ['sunday', 'monday'], default: 'monday' } },
+    { type: 'boolean', data: { key: 'show_week_numbers', label: 'Show week numbers', default: true } },
+    { type: 'boolean', data: { key: 'show_event_panel', label: 'Show event panel', default: true } },
+    { type: 'number', data: { key: 'countdown_minutes', label: 'Announce events starting within (minutes)', min: 5, max: 180, step: 5, default: 30 } },
+    { type: 'number', data: { key: 'refresh_minutes', label: 'Refresh feeds every (minutes)', min: 5, max: 120, step: 5, default: 15 } }
+  ];
+  var demoValues = { ics_feeds: 'https://example.com/a.ics' };
+  if (new URLSearchParams(location.search).get('demo') === '1') {
+    window.__demoCalls = [];
+    window.ReactNativeWebView = {
+      postMessage: function (text) {
+        var req = JSON.parse(text);
+        window.__demoCalls.push(req);
+        var value = null;
+        if (req.verb === 'context') value = { webappId: 'demo', name: 'Calendar', version: '0.1.3', deviceId: 'demo-device' };
+        else if (req.verb === 'config.fields') value = DEMO_FIELDS;
+        else if (req.verb === 'config.list') {
+          value = Object.keys(demoValues).map(function (k) { return { key: k, value: demoValues[k] }; });
+        } else if (req.verb === 'config.set') {
+          demoValues[req.payload.key] = req.payload.value;
+          value = { key: req.payload.key, value: req.payload.value };
+        }
+        setTimeout(function () {
+          deliver(JSON.stringify({ id: req.id, ok: true, value: value }));
+        }, 10);
+      }
+    };
+  }
+
+  // ---------- UI ----------
+  var app = document.getElementById('app');
+  var bar = document.getElementById('bar');
+  var statusEl = document.getElementById('status');
+  var saveBtn = document.getElementById('saveBtn');
+  var fields = [];
+  var feedInputs = []; // {row, input} in order
+
+  function setStatus(text, tone) {
+    statusEl.textContent = text;
+    statusEl.className = 'status' + (tone ? ' ' + tone : '');
+  }
+
+  function el(tag, cls, text) {
+    var n = document.createElement(tag);
+    if (cls) n.className = cls;
+    if (text !== undefined) n.textContent = text;
+    return n;
+  }
+
+  function showNoHost() {
+    app.innerHTML = '';
+    var d = el('div', 'loading');
+    d.appendChild(el('div', null, 'Open this page from the Bridgething companion app → Calendar → Settings.'));
+    app.appendChild(d);
+  }
+
+  // ----- feeds editor -----
+  function addFeedRow(value) {
+    var row = el('div', 'feed-row');
+    var input = el('input');
+    input.type = 'url';
+    input.setAttribute('inputmode', 'url');
+    input.setAttribute('autocapitalize', 'off');
+    input.setAttribute('autocorrect', 'off');
+    input.setAttribute('spellcheck', 'false');
+    input.placeholder = 'https://…/calendar.ics';
+    input.value = value || '';
+    input.setAttribute('aria-label', 'Calendar feed URL');
+    var del = el('button', 'icon-btn', '×');
+    del.type = 'button';
+    del.setAttribute('aria-label', 'Remove feed');
+    del.addEventListener('click', function () {
+      var i = feedInputs.findIndex(function (f) { return f.row === row; });
+      if (i >= 0) feedInputs.splice(i, 1);
+      row.remove();
+      if (feedInputs.length === 0) addFeedRow('');
+    });
+    row.appendChild(input);
+    row.appendChild(del);
+    feedListEl.appendChild(row);
+    feedInputs.push({ row: row, input: input });
+    return input;
+  }
+
+  var feedListEl;
+  function buildFeedsSection(values) {
+    var sec = el('section');
+    sec.appendChild(el('h2', null, 'Calendar feeds'));
+    var hint = el('p', 'hint', 'Add one feed per calendar. Tap + to add another.');
+    sec.appendChild(hint);
+    var card = el('div', 'card');
+    feedListEl = el('div');
+    card.appendChild(feedListEl);
+    var existing = (values['ics_feeds'] || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    if (existing.length === 0) existing = [''];
+    existing.forEach(function (u) { addFeedRow(u); });
+    var add = el('button', 'add-btn', '+ Add feed');
+    add.type = 'button';
+    add.addEventListener('click', function () {
+      var input = addFeedRow('');
+      input.focus();
+    });
+    card.appendChild(add);
+    var err = el('p', 'row-err', 'Each feed must be an http(s) URL.');
+    err.id = 'feedErr';
+    card.appendChild(err);
+    sec.appendChild(card);
+    return sec;
+  }
+
+  function readFeeds() {
+    return feedInputs.map(function (f) { return f.input.value.trim(); }).filter(Boolean);
+  }
+
+  function validateFeeds() {
+    var ok = true;
+    var err = document.getElementById('feedErr');
+    feedInputs.forEach(function (f) {
+      var v = f.input.value.trim();
+      var valid = v === '' || /^https?:\/\/.+/i.test(v);
+      f.input.classList.toggle('invalid', !valid);
+      if (!valid) ok = false;
+    });
+    if (err) err.classList.toggle('show', !ok);
+    return ok;
+  }
+
+  // ----- generic fields -----
+  function genericControl(field, value) {
+    var data = field.data || {};
+    var type = field.type;
+    if (type === 'enum') {
+      var sel = el('select');
+      sel.id = 'cfg-' + data.key;
+      (data.choices || []).forEach(function (c) {
+        var o = el('option', null, c);
+        o.value = c;
+        if (c === value) o.selected = true;
+        sel.appendChild(o);
+      });
+      return sel;
+    }
+    if (type === 'boolean') {
+      var wrap = el('div', 'card check-row');
+      var cb = el('input');
+      cb.type = 'checkbox';
+      cb.id = 'cfg-' + data.key;
+      cb.checked = value === 'true' || value === true;
+      var lab = el('label', null, data.label);
+      lab.setAttribute('for', cb.id);
+      wrap.appendChild(cb);
+      wrap.appendChild(lab);
+      return { node: wrap, input: cb };
+    }
+    var inp = el('input');
+    inp.id = 'cfg-' + data.key;
+    if (type === 'number') {
+      inp.type = 'number';
+      if (data.min !== undefined) inp.min = data.min;
+      if (data.max !== undefined) inp.max = data.max;
+      if (data.step !== undefined) inp.step = data.step;
+    } else if (type === 'secret') {
+      inp.type = 'password';
+    } else {
+      inp.type = 'text';
+    }
+    inp.value = value;
+    return inp;
+  }
+
+  function readGeneric(field) {
+    var data = field.data || {};
+    var n = document.getElementById('cfg-' + data.key);
+    if (!n) return '';
+    if (field.type === 'boolean') return n.checked ? 'true' : 'false';
+    return n.value;
+  }
+
+  function buildGenericSection(fields, values) {
+    var rest = fields.filter(function (f) { return (f.data || {}).key !== 'ics_feeds'; });
+    if (rest.length === 0) return null;
+    var sec = el('section');
+    sec.appendChild(el('h2', null, 'Options'));
+    rest.forEach(function (f) {
+      var data = f.data || {};
+      var key = data.key;
+      var raw = values[key];
+      var value = raw !== undefined && raw !== null ? String(raw)
+        : data.default !== undefined && data.default !== null ? String(data.default) : '';
+      if (f.type === 'boolean') {
+        var built = genericControl(f, value);
+        built.input.dataset.key = key;
+        sec.appendChild(built.node);
+      } else {
+        var wrap = el('div', 'field');
+        var lab = el('label', null, data.label || key);
+        lab.setAttribute('for', 'cfg-' + key);
+        wrap.appendChild(lab);
+        var ctrl = genericControl(f, value);
+        ctrl.dataset.key = key;
+        wrap.appendChild(ctrl);
+        sec.appendChild(wrap);
+      }
+    });
+    return sec;
+  }
+
+  // ----- boot -----
+  function boot() {
+    return Promise.all([send('context'), send('config.fields'), send('config.list')])
+      .then(function (res) {
+        var ctx = res[0] || {};
+        fields = res[1] || [];
+        var entries = res[2] || [];
+        var values = {};
+        entries.forEach(function (e) { values[e.key] = e.value; });
+
+        app.innerHTML = '';
+        var h1 = el('h1', null, (ctx.name || 'Calendar') + ' settings');
+        app.appendChild(h1);
+        var sub = el('p', 'sub', 'v' + (ctx.version || '') + (ctx.deviceId ? ' · ' + ctx.deviceId : ''));
+        app.appendChild(sub);
+
+        var feedsField = fields.find(function (f) { return (f.data || {}).key === 'ics_feeds'; });
+        if (feedsField) app.appendChild(buildFeedsSection(values));
+        var gen = buildGenericSection(fields, values);
+        if (gen) app.appendChild(gen);
+
+        bar.hidden = false;
+        setStatus('');
+      });
+  }
+
+  function save() {
+    setStatus('');
+    if (!validateFeeds()) {
+      setStatus('Fix the highlighted feed URLs first.', 'err');
+      return;
+    }
+    saveBtn.disabled = true;
+    setStatus('Saving…');
+    var ops = [];
+        ops.push(send('config.set', { key: 'ics_feeds', value: readFeeds().join('\n') }));
+    fields.forEach(function (f) {
+      var key = (f.data || {}).key;
+      if (!key || key === 'ics_feeds') return;
+      ops.push(send('config.set', { key: key, value: readGeneric(f) }));
+    });
+    Promise.all(ops).then(function () {
+      setStatus('Saved ✓', 'ok');
+    }).catch(function (err) {
+      setStatus(err.message || 'Save failed', 'err');
+    }).then(function () {
+      saveBtn.disabled = false;
+    });
+  }
+
+  document.getElementById('saveBtn').addEventListener('click', save);
+  document.getElementById('doneBtn').addEventListener('click', done);
+
+  if (!detectHost() && new URLSearchParams(location.search).get('demo') !== '1') {
+    showNoHost();
+  } else {
+    boot().catch(function (err) {
+      app.innerHTML = '';
+      var d = el('div', 'loading');
+      d.appendChild(el('div', null, 'Could not load settings: ' + (err.message || err)));
+      app.appendChild(d);
+    });
+  }
+})();
+</script>
+</body>
+</html>

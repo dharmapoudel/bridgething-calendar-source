@@ -2,7 +2,6 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { deviceTime, fetchText, getConfig, onConfigChanged } from './client';
 import { FEED_COLORS, loadFeeds } from './ics';
 import {
-  calendarsInDocument,
   dateKey,
   eventsForDateKey,
   formatCountdown,
@@ -10,9 +9,7 @@ import {
   formatTimeRange,
   indexEventsByDate,
   isDeclined,
-  isJoinableNow,
   keyForDate,
-  meetingUrlFor,
   millisUntil,
   monthGrid,
   nextEventToday,
@@ -20,14 +17,12 @@ import {
   stepMonth,
   syncState,
   todayKeyFor,
-  toggleHiddenCalendar,
   truncateTitle,
   visibleEvents,
   weekdayOrder,
   zonedParts,
 } from './model';
 import type { CalEvent } from './model';
-import { getHiddenCalendars, setHiddenCalendars } from './store';
 
 interface AppConfig {
   feeds: string[];
@@ -99,7 +94,6 @@ export default function App() {
   const [viewYear, setViewYear] = useState(() => new Date().getFullYear());
   const [viewMonth, setViewMonth] = useState(() => new Date().getMonth());
   const [selectedKey, setSelectedKey] = useState(() => keyForDate(new Date()));
-  const [hidden, setHidden] = useState<string[]>(() => getHiddenCalendars());
   const [detail, setDetail] = useState<CalEvent | null>(null);
   const [panelOpen, setPanelOpen] = useState(false);
   const configRef = useRef<AppConfig | null>(null);
@@ -107,8 +101,11 @@ export default function App() {
   const timeZoneRef = useRef<string | undefined>(undefined);
   timeZoneRef.current = timeZone;
   const interactedRef = useRef(false);
-  const navDirRef = useRef<'next' | 'prev' | 'fade'>('fade');
-  const swipeStartX = useRef<number | null>(null);
+  const navDirRef = useRef<{ dir: 'next' | 'prev' | 'fade'; axis: 'x' | 'y' }>({
+    dir: 'fade',
+    axis: 'x',
+  });
+  const swipeStartY = useRef<number | null>(null);
 
   const loadConfig = useCallback(async () => {
     // URL params override companion config (testing, kiosk setups).
@@ -211,8 +208,8 @@ export default function App() {
   }, [config, loadFeedsNow]);
 
   const visible = useMemo(
-    () => visibleEvents(events, hidden, { hideWorkingLocation: true }),
-    [events, hidden],
+    () => visibleEvents(events, [], { hideWorkingLocation: true }),
+    [events],
   );
   const index = useMemo(() => indexEventsByDate(visible), [visible]);
   const todayKey = useMemo(() => todayKeyFor(now, timeZone), [now, timeZone]);
@@ -220,8 +217,6 @@ export default function App() {
     () => monthGrid(viewYear, viewMonth, config?.weekStart ?? 1, todayKey, index),
     [viewYear, viewMonth, config, todayKey, index],
   );
-  const calendars = useMemo(() => calendarsInDocument(events), [events]);
-
   const selectedEvents = useMemo(() => {
     const list = eventsForDateKey(index, selectedKey);
     return [...list].sort((a, b) => {
@@ -236,9 +231,9 @@ export default function App() {
 
   const state = syncState(syncedAtMs, now, (config?.refreshMinutes ?? 15) * 60);
 
-  const goMonth = useCallback((delta: number) => {
+  const goMonth = useCallback((delta: number, axis: 'x' | 'y' = 'x') => {
     interactedRef.current = true;
-    navDirRef.current = delta > 0 ? 'next' : 'prev';
+    navDirRef.current = { dir: delta > 0 ? 'next' : 'prev', axis };
     const { year, month } = stepMonth(viewYear, viewMonth, delta);
     setViewYear(year);
     setViewMonth(month);
@@ -246,20 +241,12 @@ export default function App() {
 
   const goToday = useCallback(() => {
     interactedRef.current = true;
-    navDirRef.current = 'fade';
+    navDirRef.current = { dir: 'fade', axis: 'x' };
     const p = zonedParts(now, timeZoneRef.current);
     setViewYear(p.year);
     setViewMonth(p.month - 1);
     setSelectedKey(dateKey(p.year, p.month - 1, p.day));
   }, [now]);
-
-  const toggleCalendar = useCallback((id: string) => {
-    setHidden(prev => {
-      const nextHidden = toggleHiddenCalendar(prev, id);
-      setHiddenCalendars(nextHidden);
-      return nextHidden;
-    });
-  }, []);
 
   // knob (rotary wheel) steps months; arrow keys do the same
   useEffect(() => {
@@ -320,22 +307,24 @@ export default function App() {
     }
   };
 
-  const navAnimClass =
-    navDirRef.current === 'next'
-      ? 'month-in-next'
-      : navDirRef.current === 'prev'
-        ? 'month-in-prev'
-        : 'month-in-fade';
+  // Direction-aware slide for month changes: horizontal swipes/knob/arrows
+  // slide sideways, vertical swipes slide up/down.
+  const navAnimClass = (() => {
+    const { dir, axis } = navDirRef.current;
+    if (dir === 'fade') return 'month-in-fade';
+    if (axis === 'y') return dir === 'next' ? 'month-in-up' : 'month-in-down';
+    return dir === 'next' ? 'month-in-next' : 'month-in-prev';
+  })();
 
-  // Swipe left/right on the month grid steps months.
+  // Swipe up/down on the month grid steps months.
   const onTouchStart = (e: React.TouchEvent) => {
-    swipeStartX.current = e.touches[0].clientX;
+    swipeStartY.current = e.touches[0].clientY;
   };
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (swipeStartX.current === null) return;
-    const dx = e.changedTouches[0].clientX - swipeStartX.current;
-    swipeStartX.current = null;
-    if (Math.abs(dx) > 48) goMonth(dx < 0 ? 1 : -1);
+    if (swipeStartY.current === null) return;
+    const dy = e.changedTouches[0].clientY - swipeStartY.current;
+    swipeStartY.current = null;
+    if (Math.abs(dy) > 48) goMonth(dy < 0 ? 1 : -1, 'y');
   };
 
   return (
@@ -367,23 +356,7 @@ export default function App() {
             Today
           </button>
         </div>
-        <div className="ml-auto flex items-center gap-2 font-mono text-hint text-dim">
-          <span
-            title={state === 'ok' ? `Updated ${timeAgo(syncedAtMs, now)}` : state}
-            className={
-              state === 'ok' ? 'text-ok' : state === 'stale' ? 'text-warn' : 'text-dim'
-            }
-          >
-            ●
-          </span>
-          <span>{refreshing ? 'syncing…' : state === 'ok' ? timeAgo(syncedAtMs, now) : state}</span>
-          <button
-            onClick={() => config && loadFeedsNow(config)}
-            className="rounded border border-edge px-2 py-1 text-near active:bg-neutral-soft"
-            title="Refresh now"
-          >
-            ⟳
-          </button>
+        <div className="ml-auto flex items-center gap-2 font-mono text-hint">
           <span className="font-display text-title font-medium text-near">{clockText}</span>
         </div>
       </header>
@@ -398,9 +371,6 @@ export default function App() {
           >
             {truncateTitle(next.title)} <span className="text-dim">· {countdown}</span>
           </button>
-          {isJoinableNow(next, now, todayKey) && meetingUrlFor(next) && (
-            <JoinButton url={meetingUrlFor(next)} />
-          )}
         </div>
       )}
 
@@ -409,7 +379,7 @@ export default function App() {
         {/* month grid */}
         <main
           className="flex min-w-0 flex-1 flex-col px-3 py-2"
-          style={{ touchAction: 'pan-y' }}
+          style={{ touchAction: 'pan-x' }}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
@@ -474,30 +444,6 @@ export default function App() {
               </div>
             ))}
           </div>
-          {/* calendar filter chips */}
-          {calendars.length > 0 && (
-            <div className="flex shrink-0 flex-wrap items-center gap-2 pt-2">
-              {calendars.map(cal => {
-                const isHidden = hidden.includes(cal.id);
-                return (
-                  <button
-                    key={cal.id}
-                    onClick={() => toggleCalendar(cal.id)}
-                    title={isHidden ? 'Show calendar' : 'Hide calendar'}
-                    className={`flex items-center gap-1.5 rounded-full border border-edge px-2.5 py-1 font-mono text-hint ${
-                      isHidden ? 'text-dim opacity-50 line-through' : 'text-near'
-                    } active:bg-neutral-soft`}
-                  >
-                    <span
-                      className="h-2 w-2 rounded-full"
-                      style={{ backgroundColor: cal.color || '#6c7086' }}
-                    />
-                    {cal.name}
-                  </button>
-                );
-              })}
-            </div>
-          )}
         </main>
 
         {/* agenda */}
@@ -540,8 +486,6 @@ export default function App() {
                   <EventRow
                     key={ev.id}
                     event={ev}
-                    now={now}
-                    todayKey={todayKey}
                     timeZone={timeZone}
                     onOpen={() => setDetail(ev)}
                   />
@@ -560,6 +504,26 @@ export default function App() {
           </div>
         </aside>
       </div>
+
+      {/* footer: sync status sits bottom-right */}
+      <footer className="flex h-[30px] shrink-0 items-center justify-end gap-2 border-t border-rule px-4 font-mono text-hint text-dim">
+        <span
+          title={state === 'ok' ? `Updated ${timeAgo(syncedAtMs, now)}` : state}
+          className={
+            state === 'ok' ? 'text-ok' : state === 'stale' ? 'text-warn' : 'text-dim'
+          }
+        >
+          ●
+        </span>
+        <span>{refreshing ? 'syncing…' : state === 'ok' ? timeAgo(syncedAtMs, now) : state}</span>
+        <button
+          onClick={() => config && loadFeedsNow(config)}
+          className="rounded border border-edge px-2 py-0.5 text-near active:bg-neutral-soft"
+          title="Refresh now"
+        >
+          ⟳
+        </button>
+      </footer>
 
       {/* event detail modal */}
       {detail && (
@@ -588,12 +552,9 @@ export default function App() {
               <div className="mt-1 font-body text-body text-dim">{detail.location}</div>
             )}
             <div className="mt-3 min-h-0 flex-1 overflow-y-auto border-t border-rule pt-3 font-body text-body whitespace-pre-wrap text-near">
-              {detail.description || 'No details.'}
+              {detail.description ? <LinkifiedText text={detail.description} /> : 'No details.'}
             </div>
             <div className="mt-4 flex gap-2">
-              {isJoinableNow(detail, now, todayKey) && meetingUrlFor(detail) && (
-                <JoinButton url={meetingUrlFor(detail)} large />
-              )}
               <button
                 onClick={() => setDetail(null)}
                 className="flex-1 rounded border border-edge px-4 py-2.5 font-mono text-body text-near active:bg-neutral-soft"
@@ -610,20 +571,14 @@ export default function App() {
 
 function EventRow({
   event,
-  now,
-  todayKey,
   timeZone,
   onOpen,
 }: {
   event: CalEvent;
-  now: number;
-  todayKey: string;
   timeZone: string | undefined;
   onOpen: () => void;
 }) {
   const declined = isDeclined(event);
-  const joinable = isJoinableNow(event, now, todayKey);
-  const meetingUrl = meetingUrlFor(event);
   return (
     <li>
       <div className="flex items-center gap-2 px-3 py-2">
@@ -644,26 +599,61 @@ function EventRow({
             {event.location ? ` · ${event.location}` : ''}
           </div>
         </button>
-        {joinable && meetingUrl && <JoinButton url={meetingUrl} />}
       </div>
     </li>
   );
 }
 
-function JoinButton({ url, large }: { url: string; large?: boolean }) {
+// Renders plain text with any http(s) URLs turned into tappable links
+// (used for event descriptions now that the Join button is gone).
+function LinkifiedText({ text }: { text: string }) {
+  const parts = linkify(text);
   return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      onClick={e => e.stopPropagation()}
-      className={`shrink-0 rounded bg-accent font-mono text-hint font-bold text-screen uppercase tracking-wider active:opacity-80 ${
-        large ? 'px-5 py-2.5 text-body' : 'px-3 py-1.5'
-      }`}
-    >
-      Join
-    </a>
+    <>
+      {parts.map((part, i) =>
+        part.kind === 'url' ? (
+          <a
+            key={i}
+            href={part.url}
+            target="_blank"
+            rel="noreferrer"
+            onClick={e => e.stopPropagation()}
+            className="text-accent underline break-all"
+          >
+            {part.url}
+          </a>
+        ) : (
+          <span key={i}>{part.text}</span>
+        ),
+      )}
+    </>
   );
+}
+
+type LinkPart = { kind: 'text'; text: string } | { kind: 'url'; url: string };
+
+function linkify(text: string): LinkPart[] {
+  const out: LinkPart[] = [];
+  const re = /(https?:\/\/[^\s<>"')\]]+)/g;
+  let last = 0;
+  let m: RegExpExecArray | null;
+  while ((m = re.exec(text))) {
+    let url = m[1];
+    // Trailing punctuation is sentence punctuation, not part of the URL.
+    const trail = url.match(/[.,;:!?)\]]+$/);
+    let suffix = '';
+    if (trail) {
+      suffix = trail[0];
+      url = url.slice(0, -suffix.length);
+    }
+    if (m.index > last) out.push({ kind: 'text', text: text.slice(last, m.index) });
+    if (url) out.push({ kind: 'url', url });
+    const end = m.index + m[1].length;
+    if (suffix) out.push({ kind: 'text', text: suffix });
+    last = end;
+  }
+  if (last < text.length) out.push({ kind: 'text', text: text.slice(last) });
+  return out;
 }
 
 function SetupGuide() {

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.1.3 — 2026-09-10
+
+- Removed the Join button: URLs in an event's description are now tappable links instead
+- Removed the calendar filter chips from the bottom of the month grid
+- Sync status (and the refresh button) moved to a footer at the bottom right
+- Month grid swipes up/down to change months instead of left/right (swipe up = next month), with a matching vertical slide animation
+- Removed the now-unused per-calendar visibility toggles
+- New custom settings page in the companion app: calendar feeds are now added one per row with + / × buttons, so multiple feeds actually work (the old single-line field only ever kept one)
+
 ## 0.1.2 — 2026-09-10
 
 - Fixed the clock: time now renders in the phone's timezone (the device has no timezone of its own), and the daemon clock re-syncs every minute
