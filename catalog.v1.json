@@ -1,0 +1,45 @@
+{
+  "$schema": "https://apps.bridgething.com/schemas/catalog/v1.json",
+  "schema": "catalog.v1",
+  "updated_at": "2026-09-10T02:05:38.520Z",
+  "repo": {
+    "name": "Bridgething Calendar",
+    "description": "Calendar for the Spotify Car Thing: month view, agenda, countdown, one-tap meeting join.",
+    "homepage": "https://github.com/dharmapoudel/bridgething-calendar-source",
+    "icon": null
+  },
+  "apps": [
+    {
+      "id": "01a0890e-4a23-7000-bd4e-439997d71981",
+      "name": "Calendar",
+      "description": "Your calendars on your Car Thing. Month view, agenda, next-event countdown, and one-tap join for meetings.",
+      "author": "Dharma Poudel",
+      "icon": "https://dharmapoudel.github.io/bridgething-calendar-source/icons/01a0890e-4a23-7000-bd4e-439997d71981.png",
+      "screenshots": [
+        "https://dharmapoudel.github.io/bridgething-calendar-source/screenshots/01a0890e-4a23-7000-bd4e-439997d71981/01-month.png",
+        "https://dharmapoudel.github.io/bridgething-calendar-source/screenshots/01a0890e-4a23-7000-bd4e-439997d71981/01.png",
+        "https://dharmapoudel.github.io/bridgething-calendar-source/screenshots/01a0890e-4a23-7000-bd4e-439997d71981/02-detail.png",
+        "https://dharmapoudel.github.io/bridgething-calendar-source/screenshots/01a0890e-4a23-7000-bd4e-439997d71981/02.png"
+      ],
+      "homepage": "https://github.com/dharmapoudel/bridgething-calendar",
+      "source": "https://github.com/dharmapoudel/bridgething-calendar",
+      "versions": [
+        {
+          "version": "0.1.0",
+          "released_at": "2026-09-10T02:05:38.516Z",
+          "download": {
+            "url": "https://dharmapoudel.github.io/bridgething-calendar-source/r/01a0890e-4a23-7000-bd4e-439997d71981/0.1.0.zip",
+            "size": 891378,
+            "sha256": "04337d5285618eb383201a8b39c055613fd3526dc5aba56408f9b3c5cdb39ca0"
+          },
+          "permissions": [
+            "net.fetch"
+          ],
+          "min_libbridgething_version": "0.12.1",
+          "changelog": null
+        }
+      ]
+    }
+  ],
+  "recommended_sources": []
+}
