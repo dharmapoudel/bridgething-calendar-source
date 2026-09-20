@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.1.3 — 2026-09-10
+## 0.1.3
 
 - Removed the Join button: URLs in an event's description are now tappable links instead
 - Removed the calendar filter chips from the bottom of the month grid
@@ -9,7 +9,7 @@
 - Removed the now-unused per-calendar visibility toggles
 - New custom settings page in the companion app: calendar feeds are now added one per row with + / × buttons, so multiple feeds actually work (the old single-line field only ever kept one)
 
-## 0.1.2 — 2026-09-10
+## 0.1.2
 
 - Fixed the clock: time now renders in the phone's timezone (the device has no timezone of its own), and the daemon clock re-syncs every minute
 - Event times and day buckets also follow the phone's timezone now
@@ -17,7 +17,7 @@
 - Month grid only renders the weeks it needs (5 rows for September 2026 instead of a padded 6th)
 - Smoother animations: direction-aware month slide, softer panel easing, event detail pops in
 
-## 0.1.1 — 2026-09-09
+## 0.1.1
 
 - Removed the persistent CALENDAR header for a cleaner top bar
 - New companion settings: hide week numbers, hide the event panel
@@ -25,7 +25,7 @@
 - Swipe left/right on the month grid to change months
 - Catppuccin Mocha color palette matching the original Omarchy calendar
 
-## 0.1.0 — 2026-09-09
+## 0.1.0
 
 Initial release.
 
