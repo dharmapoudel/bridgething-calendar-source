@@ -1,7 +1,7 @@
 {
   "$schema": "https://apps.bridgething.com/schemas/catalog/v1.json",
   "schema": "catalog.v1",
-  "updated_at": "2026-09-10T03:04:50.838Z",
+  "updated_at": "2026-09-20T21:32:42.652Z",
   "repo": {
     "name": "Bridgething Calendar",
     "description": "Calendar for the Spotify Car Thing: month view, agenda, and a next-event countdown.",
@@ -39,7 +39,7 @@
             "net.fetch"
           ],
           "min_libbridgething_version": "0.12.1",
-          "changelog": null
+          "changelog": "- Removed the Join button: URLs in an event's description are now tappable links instead\n- Removed the calendar filter chips from the bottom of the month grid\n- Sync status (and the refresh button) moved to a footer at the bottom right\n- Month grid swipes up/down to change months instead of left/right (swipe up = next month), with a matching vertical slide animation\n- Removed the now-unused per-calendar visibility toggles\n- New custom settings page in the companion app: calendar feeds are now added one per row with + / × buttons, so multiple feeds actually work (the old single-line field only ever kept one)"
         },
         {
           "version": "0.1.2",
@@ -53,7 +53,7 @@
             "net.fetch"
           ],
           "min_libbridgething_version": "0.12.1",
-          "changelog": null
+          "changelog": "- Fixed the clock: time now renders in the phone's timezone (the device has no timezone of its own), and the daemon clock re-syncs every minute\n- Event times and day buckets also follow the phone's timezone now\n- Larger month title and larger date numbers\n- Month grid only renders the weeks it needs (5 rows for September 2026 instead of a padded 6th)\n- Smoother animations: direction-aware month slide, softer panel easing, event detail pops in"
         },
         {
           "version": "0.1.1",
@@ -67,7 +67,7 @@
             "net.fetch"
           ],
           "min_libbridgething_version": "0.12.1",
-          "changelog": null
+          "changelog": "- Removed the persistent CALENDAR header for a cleaner top bar\n- New companion settings: hide week numbers, hide the event panel\n- Tapping a date slides the event panel in with an animation (tap the date again or ✕ to dismiss)\n- Swipe left/right on the month grid to change months\n- Catppuccin Mocha color palette matching the original Omarchy calendar"
         },
         {
           "version": "0.1.0",
@@ -81,7 +81,7 @@
             "net.fetch"
           ],
           "min_libbridgething_version": "0.12.1",
-          "changelog": null
+          "changelog": "Initial release.\n\n- Month grid with event dots, ISO week numbers, and Today shortcut\n- Selected-day agenda with times, locations, and all-day events\n- Next-event countdown banner with one-tap Join for Meet, Zoom, Teams, Webex, GoToMeeting, and Chime\n- Event detail modal with description and location\n- Full ICS support: RRULE recurrence, TZID timezones, EXDATE, RECURRENCE-ID overrides, multi-day events\n- Multiple feeds with per-calendar colors and visibility filters\n- Companion-app settings: feed URLs, week start, countdown window, refresh interval\n- Knob / arrow-key month navigation"
         }
       ]
     }
