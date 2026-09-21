@@ -101,11 +101,8 @@ export default function App() {
   const timeZoneRef = useRef<string | undefined>(undefined);
   timeZoneRef.current = timeZone;
   const interactedRef = useRef(false);
-  const navDirRef = useRef<{ dir: 'next' | 'prev' | 'fade'; axis: 'x' | 'y' }>({
-    dir: 'fade',
-    axis: 'x',
-  });
-  const swipeStartY = useRef<number | null>(null);
+  const navDirRef = useRef<{ dir: 'next' | 'prev' | 'fade' }>({ dir: 'fade' });
+  const swipeStart = useRef<{ x: number; y: number } | null>(null);
 
   const loadConfig = useCallback(async () => {
     // URL params override companion config (testing, kiosk setups).
@@ -231,9 +228,9 @@ export default function App() {
 
   const state = syncState(syncedAtMs, now, (config?.refreshMinutes ?? 15) * 60);
 
-  const goMonth = useCallback((delta: number, axis: 'x' | 'y' = 'x') => {
+  const goMonth = useCallback((delta: number) => {
     interactedRef.current = true;
-    navDirRef.current = { dir: delta > 0 ? 'next' : 'prev', axis };
+    navDirRef.current = { dir: delta > 0 ? 'next' : 'prev' };
     const { year, month } = stepMonth(viewYear, viewMonth, delta);
     setViewYear(year);
     setViewMonth(month);
@@ -241,7 +238,7 @@ export default function App() {
 
   const goToday = useCallback(() => {
     interactedRef.current = true;
-    navDirRef.current = { dir: 'fade', axis: 'x' };
+    navDirRef.current = { dir: 'fade' };
     const p = zonedParts(now, timeZoneRef.current);
     setViewYear(p.year);
     setViewMonth(p.month - 1);
@@ -307,24 +304,24 @@ export default function App() {
     }
   };
 
-  // Direction-aware slide for month changes: horizontal swipes/knob/arrows
-  // slide sideways, vertical swipes slide up/down.
+  // Month changes always slide sideways: left/right swipes, knob, arrows.
   const navAnimClass = (() => {
-    const { dir, axis } = navDirRef.current;
+    const { dir } = navDirRef.current;
     if (dir === 'fade') return 'month-in-fade';
-    if (axis === 'y') return dir === 'next' ? 'month-in-up' : 'month-in-down';
     return dir === 'next' ? 'month-in-next' : 'month-in-prev';
   })();
 
-  // Swipe up/down on the month grid steps months.
+  // Swipe left/right on the month grid steps months (swipe left = next month).
+  // Vertical swipes are intentionally ignored.
   const onTouchStart = (e: React.TouchEvent) => {
-    swipeStartY.current = e.touches[0].clientY;
+    swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
   };
   const onTouchEnd = (e: React.TouchEvent) => {
-    if (swipeStartY.current === null) return;
-    const dy = e.changedTouches[0].clientY - swipeStartY.current;
-    swipeStartY.current = null;
-    if (Math.abs(dy) > 48) goMonth(dy < 0 ? 1 : -1, 'y');
+    if (swipeStart.current === null) return;
+    const dx = e.changedTouches[0].clientX - swipeStart.current.x;
+    const dy = e.changedTouches[0].clientY - swipeStart.current.y;
+    swipeStart.current = null;
+    if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy)) goMonth(dx < 0 ? 1 : -1);
   };
 
   return (

@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.1.4
+
+- Month grid swipes left/right to change months again (swipe left = next month); the top/bottom swipe from 0.1.3 is removed
+- Fonts now match Radio Atlas: Outfit + Inter with Noto Sans Devanagari and Noto Sans Arabic fallbacks so event titles in Hindi/Nepali/Arabic render instead of tofu blocks
+
 ## 0.1.3
 
 - Removed the Join button: URLs in an event's description are now tappable links instead

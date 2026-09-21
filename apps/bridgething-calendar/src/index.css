@@ -16,6 +16,27 @@
   src: url("./fonts/Inter-Variable.ttf") format("truetype-variations");
 }
 
+/* script fallbacks so event titles in Devanagari (Hindi/Nepali) and Arabic
+   render instead of tofu blocks; unicode-range keeps them out of the way of
+   latin text */
+@font-face {
+  font-family: "Noto Sans Devanagari";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/NotoSansDevanagari-subset.woff2") format("woff2");
+  unicode-range: U+0900-097F, U+1CD0-1CF9, U+200C-200D, U+20A8, U+20B9, U+A830-A839, U+A8E0-A8FF;
+}
+
+@font-face {
+  font-family: "Noto Sans Arabic";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url("./fonts/NotoSansArabic-subset.woff2") format("woff2");
+  unicode-range: U+0600-06FF, U+0750-077F, U+0870-088E, U+0890-0891, U+0897-08FF, U+FB50-FDFF, U+FE70-FE74, U+FE76-FEFC;
+}
+
 @theme {
   /* Catppuccin Mocha — the Omarchy default theme */
   --color-off-white: #cdd6f4;
@@ -54,8 +75,8 @@
   --text-hero: 1.375rem;
   --text-screen-title: 2.125rem;
 
-  --font-display: "Outfit", system-ui, sans-serif;
-  --font-body: "Inter", system-ui, sans-serif;
+  --font-display: "Outfit", "Noto Sans Devanagari", "Noto Sans Arabic", system-ui, sans-serif;
+  --font-body: "Inter", "Noto Sans Devanagari", "Noto Sans Arabic", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
   --tracking-wordmark: -0.03em;
@@ -108,28 +129,6 @@
   }
 }
 
-@keyframes month-in-up {
-  from {
-    opacity: 0;
-    transform: translateY(32px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes month-in-down {
-  from {
-    opacity: 0;
-    transform: translateY(-32px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
 @keyframes month-in-fade {
   from {
     opacity: 0;
@@ -168,17 +167,6 @@
   animation: month-in-prev 260ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
-
-.month-in-up {
-  animation: month-in-up 260ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform, opacity;
-}
-
-.month-in-down {
-  animation: month-in-down 260ms cubic-bezier(0.22, 1, 0.36, 1);
-  will-change: transform, opacity;
-}
-
 .month-in-fade {
   animation: month-in-fade 200ms ease-out;
 }
@@ -195,8 +183,6 @@
 @media (prefers-reduced-motion: reduce) {
   .month-in-next,
   .month-in-prev,
-  .month-in-up,
-  .month-in-down,
   .month-in-fade,
   .modal-backdrop-in,
   .modal-pop {
