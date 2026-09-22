@@ -83,19 +83,46 @@ function timeAgo(ms: number | null, now: number): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
-// Portrait detection: the device rotates the panel 90deg, so portrait arrives
-// as a 480x800 viewport. Weather-style fluid layout: stack grid above panel.
+// Portrait detection: the daemon pins the layout viewport at 800x480 and
+// rotates the panel, so CSS (orientation: portrait) never matches on-device.
+// screen.orientation does report the rotated orientation, so check it first
+// and keep matchMedia as the fallback (same approach as Radio 0.6.6).
+function detectPortrait(): boolean {
+  try {
+    if (screen.orientation?.type.startsWith('portrait')) return true;
+  } catch {
+    /* older webview */
+  }
+  try {
+    if (window.matchMedia('(orientation: portrait)').matches) return true;
+  } catch {
+    /* no matchMedia */
+  }
+  return false;
+}
+
 function useIsPortrait(): boolean {
-  const [portrait, setPortrait] = useState(
-    () =>
-      typeof window !== 'undefined' &&
-      window.matchMedia('(orientation: portrait)').matches,
-  );
+  const [portrait, setPortrait] = useState(detectPortrait);
   useEffect(() => {
-    const mq = window.matchMedia('(orientation: portrait)');
-    const onChange = () => setPortrait(mq.matches);
-    mq.addEventListener('change', onChange);
-    return () => mq.removeEventListener('change', onChange);
+    const update = () => setPortrait(detectPortrait());
+    let orientation: ScreenOrientation | null = null;
+    let mq: MediaQueryList | null = null;
+    try {
+      orientation = screen.orientation;
+      orientation.addEventListener('change', update);
+      mq = window.matchMedia('(orientation: portrait)');
+      mq.addEventListener('change', update);
+    } catch {
+      /* listeners unavailable */
+    }
+    return () => {
+      try {
+        orientation?.removeEventListener('change', update);
+        mq?.removeEventListener('change', update);
+      } catch {
+        /* ignore */
+      }
+    };
   }, []);
   return portrait;
 }

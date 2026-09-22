@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.7
+
+- On-device portrait detection: the daemon pins the layout viewport at 800x480 and rotates the panel, so CSS (orientation: portrait) never matched on the Car Thing and the portrait layout never activated there. Detection now checks screen.orientation first (Radio 0.6.6 approach) with matchMedia as fallback; landscape unchanged
+
 ## 0.1.6
 
 - Portrait split: the month grid now takes the top 60% of the screen and the event panel fills the bottom 40% (was 36%); landscape unchanged
