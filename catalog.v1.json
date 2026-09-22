@@ -1,7 +1,7 @@
 {
   "$schema": "https://apps.bridgething.com/schemas/catalog/v1.json",
   "schema": "catalog.v1",
-  "updated_at": "2026-09-21T01:59:36.692Z",
+  "updated_at": "2026-09-22T00:41:43.084Z",
   "repo": {
     "name": "Bridgething Calendar",
     "description": "Calendar for the Spotify Car Thing: month view, agenda, and a next-event countdown.",
@@ -22,6 +22,25 @@
       "homepage": "https://github.com/dharmapoudel/bridgething-calendar",
       "source": "https://github.com/dharmapoudel/bridgething-calendar",
       "versions": [
+        {
+          "version": "0.1.5",
+          "released_at": "2026-09-22T00:41:43.062Z",
+          "download": {
+            "url": "https://dharmapoudel.github.io/bridgething-calendar-source/r/01a0890e-4a23-7000-bd4e-439997d71981/0.1.5.zip",
+            "size": 1190722,
+            "sha256": "33587f8d0ecc26a88dda57889ce56ece39968ca123b88d2fbba169add825dadb"
+          },
+          "settings": {
+            "url": "https://dharmapoudel.github.io/bridgething-calendar-source/s/01a0890e-4a23-7000-bd4e-439997d71981/0.1.5.html",
+            "size": 16762,
+            "sha256": "eabfddc304bc6603ed55a2990bf87d9573da8fcef42d28acc92927006be3dae2"
+          },
+          "permissions": [
+            "net.fetch"
+          ],
+          "min_libbridgething_version": "0.12.1",
+          "changelog": "- Portrait layout fix: in portrait (480x800) the month grid now takes the full width with the agenda stacked below it (Weather-style column), and the slide-over event panel becomes a bottom sheet; the event detail modal no longer overflows the narrower viewport. Landscape (800x480) is unchanged"
+        },
         {
           "version": "0.1.4",
           "released_at": "2026-09-21T01:59:36.336Z",
