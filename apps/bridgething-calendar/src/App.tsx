@@ -394,7 +394,7 @@ export default function App() {
         {/* portrait: grid on top, agenda below (Weather-style column); landscape: unchanged row */}
         {/* month grid */}
         <main
-          className="flex min-w-0 flex-1 flex-col px-3 py-2"
+          className={`flex min-w-0 ${isPortrait ? "h-[60%] w-full shrink-0" : "flex-1"} flex-col px-3 py-2`}
           style={{ touchAction: 'pan-x' }}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
@@ -467,7 +467,7 @@ export default function App() {
           className={
             panelPinned
               ? isPortrait
-                ? 'flex h-[36%] w-full shrink-0 flex-col border-t border-rule bg-screen'
+                ? 'flex h-[40%] w-full shrink-0 flex-col border-t border-rule bg-screen'
                 : 'flex w-72 shrink-0 flex-col border-l border-rule bg-screen'
               : isPortrait
                 ? `absolute inset-x-0 bottom-0 z-[5] flex max-h-[70%] w-full flex-col border-t border-rule bg-screen shadow-2xl transition-transform duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${

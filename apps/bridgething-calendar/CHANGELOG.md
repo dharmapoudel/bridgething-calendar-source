@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.1.6
+
+- Portrait split: the month grid now takes the top 60% of the screen and the event panel fills the bottom 40% (was 36%); landscape unchanged
+
 ## 0.1.5
 
 - Portrait layout fix: in portrait (480x800) the month grid now takes the full width with the agenda stacked below it (Weather-style column), and the slide-over event panel becomes a bottom sheet; the event detail modal no longer overflows the narrower viewport. Landscape (800x480) is unchanged
