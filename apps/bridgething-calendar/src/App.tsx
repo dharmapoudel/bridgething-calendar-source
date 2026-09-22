@@ -83,6 +83,23 @@ function timeAgo(ms: number | null, now: number): string {
   return `${Math.floor(h / 24)}d ago`;
 }
 
+// Portrait detection: the device rotates the panel 90deg, so portrait arrives
+// as a 480x800 viewport. Weather-style fluid layout: stack grid above panel.
+function useIsPortrait(): boolean {
+  const [portrait, setPortrait] = useState(
+    () =>
+      typeof window !== 'undefined' &&
+      window.matchMedia('(orientation: portrait)').matches,
+  );
+  useEffect(() => {
+    const mq = window.matchMedia('(orientation: portrait)');
+    const onChange = () => setPortrait(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return portrait;
+}
+
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [events, setEvents] = useState<CalEvent[]>([]);
@@ -103,6 +120,7 @@ export default function App() {
   const interactedRef = useRef(false);
   const navDirRef = useRef<{ dir: 'next' | 'prev' | 'fade' }>({ dir: 'fade' });
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
+  const isPortrait = useIsPortrait();
 
   const loadConfig = useCallback(async () => {
     // URL params override companion config (testing, kiosk setups).
@@ -372,7 +390,8 @@ export default function App() {
       )}
 
       {/* body */}
-      <div className="relative flex min-h-0 flex-1">
+      <div className={`relative flex min-h-0 flex-1 ${isPortrait ? "flex-col" : ""}`}>
+        {/* portrait: grid on top, agenda below (Weather-style column); landscape: unchanged row */}
         {/* month grid */}
         <main
           className="flex min-w-0 flex-1 flex-col px-3 py-2"
@@ -447,10 +466,18 @@ export default function App() {
         <aside
           className={
             panelPinned
-              ? 'flex w-72 shrink-0 flex-col border-l border-rule bg-screen'
-              : `absolute inset-y-0 right-0 z-[5] flex w-72 flex-col border-l border-rule bg-screen shadow-2xl transition-transform duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
-                  panelVisible ? 'translate-x-0' : 'translate-x-full'
-                }`
+              ? isPortrait
+                ? 'flex h-[36%] w-full shrink-0 flex-col border-t border-rule bg-screen'
+                : 'flex w-72 shrink-0 flex-col border-l border-rule bg-screen'
+              : isPortrait
+                ? `absolute inset-x-0 bottom-0 z-[5] flex max-h-[70%] w-full flex-col border-t border-rule bg-screen shadow-2xl transition-transform duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
+                    panelVisible ? 'translate-y-0'
+                    // +30px clears the footer below the body so the closed sheet hides fully
+                    : 'translate-y-[calc(100%+30px)]'
+                  }`
+                : `absolute inset-y-0 right-0 z-[5] flex w-72 flex-col border-l border-rule bg-screen shadow-2xl transition-transform duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
+                    panelVisible ? 'translate-x-0' : 'translate-x-full'
+                  }`
           }
         >
           <div className="flex shrink-0 items-center border-b border-rule px-3 py-2">
@@ -529,7 +556,7 @@ export default function App() {
           onClick={() => setDetail(null)}
         >
           <div
-            className="modal-pop flex max-h-full w-[480px] flex-col rounded border border-edge bg-bg p-5"
+            className="modal-pop flex max-h-full w-[480px] max-w-full flex-col rounded border border-edge bg-bg p-5"
             onClick={e => e.stopPropagation()}
           >
             <div className="flex items-center gap-2">
