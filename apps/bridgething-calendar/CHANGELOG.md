@@ -1,3 +1,7 @@
+## 0.2.20
+
+Fixed today-date text color: light mode select ink softened from bright white #f6ede6 to #d9c4b8; reverted 0.2.19 circle background changes (dark back to #fbf4f2, light back to #2b1d21).
+
 ## 0.2.19
 
 Softened the today/selected date indicator: dark mode uses soft rose accent (#f2c9c4) instead of bright white, light mode uses muted rose (#b35563) instead of near-black.
