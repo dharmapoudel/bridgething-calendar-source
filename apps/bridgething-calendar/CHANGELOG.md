@@ -1,3 +1,7 @@
+## 0.2.23
+
+Dialog (day sheet/modal) now always uses dark theme via data-theme="dark" on the dialog containers (new [data-theme="dark"] CSS rule re-declares dark custom properties so dialogs stay dark regardless of app theme or background detection). Background detection now applies to ALL text: when the Bing photo is absent or fails to load, contrast falls back to the theme's own background color (light theme → dark text) instead of doing nothing. Date header verified already using full-contrast text-off-white.
+
 ## 0.2.22
 
 Today-date text in light mode changed from soft white (#d9c4b8) to soft rose (#f2c9c4) per user request.

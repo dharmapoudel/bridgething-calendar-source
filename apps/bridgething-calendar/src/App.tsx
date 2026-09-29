@@ -250,14 +250,20 @@ export default function App() {
     document.documentElement.dataset.theme = config?.theme ?? 'dark';
   }, [config?.theme]);
 
-  // Detect the Bing backdrop photo's brightness and flip text to dark when
-  // the photo is light, so text stays readable over the variable background.
-  // Only sets data-bg on documentElement (CSS swaps text colors) — no layout
-  // or size changes.
+  // Detect the background brightness and flip text to dark when the
+  // background is light, so text stays readable. When the Bing backdrop
+  // photo loads, its average luminance decides; when it fails/absent,
+  // fall back to the theme's own background color. Only sets data-bg on
+  // documentElement (CSS swaps text colors globally) — no layout or
+  // size changes.
   useEffect(() => {
     const root = document.documentElement;
+    const theme = config?.theme ?? 'dark';
     if (!backdropUrl) {
-      root.removeAttribute('data-bg');
+      // No photo: judge by the theme's solid background instead of doing
+      // nothing, so ALL text still gets background-appropriate contrast.
+      if (theme === 'light') root.dataset.bg = 'light';
+      else root.removeAttribute('data-bg');
       return;
     }
     let cancelled = false;
@@ -282,17 +288,25 @@ export default function App() {
         if (avg > 140) root.dataset.bg = 'light';
         else root.removeAttribute('data-bg');
       } catch {
-        if (!cancelled) root.removeAttribute('data-bg');
+        // Photo unreadable: fall back to the theme's background.
+        if (!cancelled) {
+          if (theme === 'light') root.dataset.bg = 'light';
+          else root.removeAttribute('data-bg');
+        }
       }
     };
     img.onerror = () => {
-      if (!cancelled) root.removeAttribute('data-bg');
+      // Photo failed to load: fall back to the theme's background.
+      if (!cancelled) {
+        if (theme === 'light') root.dataset.bg = 'light';
+        else root.removeAttribute('data-bg');
+      }
     };
     img.src = backdropUrl;
     return () => {
       cancelled = true;
     };
-  }, [backdropUrl]);
+  }, [backdropUrl, config?.theme]);
 
   // The first feed load usually races the daemon clock; once the phone's
   // timezone is known, re-expand so day buckets and times use it.
@@ -780,9 +794,11 @@ export default function App() {
         </div>
       </main>
 
-      {/* day sheet: bottom sheet in portrait, centered card in landscape */}
+      {/* day sheet: bottom sheet in portrait, centered card in landscape.
+          Forced dark via data-theme="dark" (see index.css) regardless of app theme. */}
       {isPortrait ? (
         <aside
+          data-theme="dark"
           className={`absolute inset-x-0 bottom-0 z-[5] flex max-h-[70%] w-full flex-col rounded-t-2xl bg-panel shadow-2xl transition-transform duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
             sheetOpen ? 'translate-y-0' : 'translate-y-[calc(100%+30px)]'
           }`}
@@ -797,6 +813,7 @@ export default function App() {
             onClick={() => setSheetOpen(false)}
           >
             <div
+              data-theme="dark"
               className="modal-pop flex max-h-[82%] w-[440px] max-w-full flex-col overflow-hidden rounded-2xl bg-panel shadow-2xl"
               onClick={e => e.stopPropagation()}
             >
@@ -814,6 +831,7 @@ export default function App() {
           onClick={() => setDetail(null)}
         >
           <div
+            data-theme="dark"
             className="modal-pop flex max-h-full w-[480px] max-w-full flex-col rounded-2xl bg-panel p-5 shadow-2xl"
             onClick={e => e.stopPropagation()}
           >

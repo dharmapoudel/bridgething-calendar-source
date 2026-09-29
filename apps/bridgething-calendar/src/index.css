@@ -156,6 +156,39 @@
   --color-near: #2b1d21;
 }
 
+/* Force-dark for dialog containers (day sheet / modals): re-declares the
+   dark theme custom properties so dialogs always render dark regardless of
+   the app theme or background-brightness detection. Applied via
+   data-theme="dark" on the dialog container elements in App.tsx. Matches the
+   dialog element itself, so these values override anything inherited from a
+   light-themed or data-bg="light" documentElement. Placed last to win. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-off-white: #fbf4f2;
+  --color-bg: #161211;
+  --color-screen: #161211;
+  --color-fg: #fbf4f2;
+  --color-muted: #fbf4f2;
+  --color-accent: #f2c9c4;
+  --color-ok: #b7e4b2;
+  --color-err: #f5a3b8;
+  --color-warn: #f7c489;
+  --color-experimental: #f7c489;
+
+  --color-rule: rgb(251 244 242 / 0.16);
+  --color-rule-strong: rgb(251 244 242 / 0.28);
+  --color-edge: rgb(251 244 242 / 0.32);
+  --color-dim: rgb(251 244 242 / 0.78);
+  --color-soft: #fbf4f2;
+  --color-near: #fbf4f2;
+
+  --color-select: #fbf4f2;
+  --color-select-ink: #33272b;
+
+  --color-panel: #221a16;
+}
+
 @layer base {
   :root {
     color-scheme: dark;
