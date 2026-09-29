@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.2.1
+- Match the reference mockup exactly: flat muted-rose theme (#8C5858), warm-white text, Inter throughout.
+- Removed week numbers, Today button, month arrows, sync footer, pinned agenda, event dots, today highlight, AM/PM on the clock.
+- Sunday-start grid with blank leading cells; title-case day header; month title without year.
+- Bottom-left next-event line is now a swipeable one-line carousel of upcoming events (tap opens detail).
+- Day tap / knob press opens a theme-matched day sheet (bottom sheet in portrait, centered card in landscape).
+
 ## 0.2.0
 
 - Redesign: minimal clock/calendar layout inspired by the reference mockup — big live clock with the focused day ("Friday 9/18") and a next-upcoming-event line on the left, month grid on the right with a white selection circle
