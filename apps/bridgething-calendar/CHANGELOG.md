@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.10
+- Proportional system: Monday header now matches September at 20px (nudge removed); panel padding symmetric top/bottom (40px landscape, 32px portrait month panel); DOW headers match date size (22px); clock = 2.5 x DOW row height (102.5px, top still glued to DOW top); event line's vertical center aligned to the last date row's center (landscape, 5-week grid).
+
 ## 0.2.9
 - Big clock is now Source Serif Pro Medium (weight 500); its font-size spans two rows (DOW header row + first week row): 93.4px landscape / 94.2px portrait.
 - Landscape: the "Monday 9/28" date header nudged down 3.6px so it looks level with "September" (δ = (30 − 22.8)/2); the clock's top margin re-derived to 15.6px so its top edge still meets the S M T W T F S row's top edge.

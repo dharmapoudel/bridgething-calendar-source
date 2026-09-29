@@ -557,17 +557,12 @@ export default function App() {
       {/* clock panel: left in landscape, top in portrait */}
       <section
         className={`relative z-[1] flex shrink-0 flex-col ${
-          isPortrait ? 'h-[40%] w-full px-6 pt-5 pb-4' : 'w-[40%] px-7 py-6'
+          isPortrait ? 'h-[40%] w-full px-6 pt-5 pb-4' : 'w-[40%] px-7 pt-10 pb-6'
         }`}
       >
-        <div
-          className="font-body text-[0.95rem] font-medium text-off-white"
-          style={{
-            // landscape: optical nudge so the smaller date line looks level with
-            // "September" — δ = (septBox − dateBox)/2 = (30 − 22.8)/2 = 3.6px.
-            marginTop: isPortrait ? undefined : 3.6,
-          }}
-        >
+        {/* date header: same size as September (20px); identical boxes mean
+            top-aligned IS optically aligned — 0.2.9's +3.6px nudge removed. */}
+        <div className="font-body text-[1.25rem] font-medium text-off-white">
           {dayHeaderLabel(selectedKey)}
         </div>
         <div
@@ -576,22 +571,32 @@ export default function App() {
           style={{
             fontFamily: '"Source Serif Pro", Georgia, "Times New Roman", serif',
             fontWeight: 500,
-            // font-size spans 2 rows: DOW row (12.8*1.5 + pb-2 = 27.2) + one week
-            // row track ((panelH − chrome)/5 − gap). landscape: 27.2 + 66.16 = 93.4;
-            // portrait: 27.2 + 66.96 = 94.2. leading-none keeps the em box exact.
-            fontSize: isPortrait ? 94.2 : 93.4,
+            // font-size = 2.5 x DOW row height. DOW = date size (1.375rem = 22px),
+            // so H_dow = 22*1.5 + pb-2(8) = 41 -> clock = 102.5px. DOW classes are
+            // orientation-independent, so one value serves both. leading-none
+            // keeps the em box exact.
+            fontSize: 102.5,
             letterSpacing: '-0.02em',
-            // landscape: clockTop == dowTop. mondayTop = y0+3.6, so
-            // mt = (septBox + septPadBottom) − dateBox − δ = 42 − 22.8 − 3.6 = 15.6px.
-            marginTop: isPortrait ? undefined : 15.6,
+            // landscape: clockTop == dowTop (standing). mondayBox == septBox == 30
+            // now, so mt = septPadBottom = 12px. portrait keeps mt-2 (className).
+            marginTop: isPortrait ? undefined : 12,
           }}
         >
           {clockMain}
         </div>
         {/* one-line next-event carousel: swipe to see more */}
         <div
-          className="mt-auto w-full select-none"
-          style={{ touchAction: 'pan-y' }}
+          className={`w-full select-none ${isPortrait ? 'mt-auto' : ''}`}
+          style={{
+            touchAction: 'pan-y',
+            // landscape: event line's vertical center == last (5th) date row's
+            // center. gridTop = dowTop(82) + H_dow(41) = 123 (no grid top pad in
+            // code); rowH = (gridAvailH(317) - 4*4)/5 = 60.2;
+            // lastRowCenter = 123 + 4.5*60.2 + 16 = 409.9;
+            // eventMt = 409.9 - clockBottom(184.5) - E/2(12) = 213.4px.
+            // portrait: mt-auto bottom-anchored, untouched.
+            marginTop: isPortrait ? undefined : 213.4,
+          }}
           onTouchStart={onLineTouchStart}
           onTouchEnd={onLineTouchEnd}
         >
@@ -616,7 +621,7 @@ export default function App() {
       {/* month grid */}
       <main
         className={`relative z-[1] flex min-h-0 flex-col ${
-          isPortrait ? 'h-[60%] w-full pl-6 pr-10 pt-4 pb-8' : 'flex-1 pl-8 pr-14 pt-6 pb-10'
+          isPortrait ? 'h-[60%] w-full pl-6 pr-10 pt-8 pb-8' : 'flex-1 pl-8 pr-14 pt-10 pb-10'
         }`}
         style={{ touchAction: 'pan-x' }}
         onTouchStart={onTouchStart}
@@ -634,7 +639,7 @@ export default function App() {
           {WEEKDAY_LETTERS.map((letter, i) => (
             <div
               key={i}
-              className="pb-2 text-center font-body text-[0.8rem] text-dim"
+              className="pb-2 text-center font-body text-[1.375rem] text-dim"
             >
               {letter}
             </div>
