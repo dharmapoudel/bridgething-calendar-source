@@ -66,8 +66,9 @@ function parseConfig(raw: {
   countdown: string | null;
 }): AppConfig {
   const parsed = (raw.feeds || '')
-    .split('\n')
-    .map(s => s.trim())
+    .replace(/\\n/g, ';').replace(/\n/g, ';')
+    .split(';')
+    .map(s => s.replace(/\s+/g, ''))
     .filter(s => /^https:\/\//i.test(s) || /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])/i.test(s));
   const feeds = parsed.length === 0 ? DEFAULT_FEEDS : parsed;
   const refreshMinutes = clampInt(raw.refresh, 15, 5, 120);

@@ -205,7 +205,7 @@
     { type: 'number', data: { key: 'countdown_minutes', label: 'Announce events starting within (minutes)', min: 5, max: 180, step: 5, default: 30 } },
     { type: 'number', data: { key: 'refresh_minutes', label: 'Refresh feeds every (minutes)', min: 5, max: 120, step: 5, default: 15 } }
   ];
-  var demoValues = { ics_feeds: 'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics\nhttps://www.calendarlabs.com/ical-calendar/ics/76/US_Holidays.ics\nhttps://www.calendarlabs.com/ical-calendar/ics/76/Formula_1.ics\nhttps://www.fixturedownload.com/download/epl-2025-26-GMT.ics\nhttps://www.calendarlabs.com/ical-calendar/ics/75/NFL.ics\nhttps://calendar.google.com/calendar/ical/ht3jlfaac5lfd6263ulfh4tql8%40group.calendar.google.com/public/basic.ics' };
+  var demoValues = { ics_feeds: 'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics;https://www.calendarlabs.com/ical-calendar/ics/76/US_Holidays.ics;https://www.calendarlabs.com/ical-calendar/ics/76/Formula_1.ics;https://www.fixturedownload.com/download/epl-2025-26-GMT.ics;https://www.calendarlabs.com/ical-calendar/ics/75/NFL.ics;https://calendar.google.com/calendar/ical/ht3jlfaac5lfd6263ulfh4tql8%40group.calendar.google.com/public/basic.ics' };
   if (new URLSearchParams(location.search).get('demo') === '1') {
     window.__demoCalls = [];
     window.ReactNativeWebView = {
@@ -299,7 +299,7 @@
     var defaultFeeds = feedsField && feedsField.data ? feedsField.data.default : null;
     var rawFeeds = values['ics_feeds'];
     if ((!rawFeeds || !String(rawFeeds).trim()) && defaultFeeds) rawFeeds = defaultFeeds;
-    var existing = (rawFeeds || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    var existing = (rawFeeds || '').replace(/\\n/g, ';').replace(/\n/g, ';').split(';').map(function (s) { return s.replace(/\s+/g, ''); }).filter(Boolean);
     if (existing.length === 0) existing = [''];
     existing.forEach(function (u) { addFeedRow(u); });
     var add = el('button', 'add-btn', '+ Add feed');
@@ -317,7 +317,7 @@
   }
 
   function readFeeds() {
-    return feedInputs.map(function (f) { return f.input.value.trim(); }).filter(Boolean);
+    return feedInputs.map(function (f) { return f.input.value.replace(/\s+/g, ''); }).filter(Boolean);
   }
 
   function validateFeeds() {
@@ -448,7 +448,7 @@
     saveBtn.disabled = true;
     setStatus('Saving…');
     var ops = [];
-        ops.push(send('config.set', { key: 'ics_feeds', value: readFeeds().join('\n') }));
+        ops.push(send('config.set', { key: 'ics_feeds', value: readFeeds().join(';') }));
     fields.forEach(function (f) {
       var key = (f.data || {}).key;
       if (!key || key === 'ics_feeds') return;

@@ -1,3 +1,7 @@
+## 0.2.28
+
+Changed ics_feeds delimiter from newlines to `;` (semicolon): the feed list is now stored as `url1;url2;url3` which displays cleanly in the iOS companion app's single-line input box. settings.html and App.tsx both normalize legacy formats (actual newlines and literal backslash-n sequences are converted to `;`) before splitting, so existing saved values keep working. The webview save path joins with `;`, and the manifest default uses `;` separators.
+
 ## 0.2.27
 
 Regional background brightness analysis — the date/clock panel (left) and the month calendar grid (right) now independently adapt text contrast to the photo behind them, instead of one global average that couldn't fix a bright sky on the left and dark ground on the right at the same time. Each region's luminance is sampled separately (x < 35% vs x >= 35%, same 140 threshold) into data-bg-left / data-bg-right, with the theme-color fallback when no photo loads. Also added a subtle text-shadow safety net on both panels (flips with each region's detected brightness) so text stays readable even where the analysis is slightly off.
