@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.12
+- True warm dark theme: the default dark theme is now a near-black warm (#161211) instead of muted rose; light theme unchanged.
+
 ## 0.2.11
 - Removed the dead "Show week numbers" and "Show event panel" settings from the companion-app settings schema (neither key is referenced by the app).
 
