@@ -482,6 +482,18 @@ export default function App() {
         goToday();
         return;
       }
+      // Car Thing hardware preset buttons (0.2.25): preset 1 / F1 toggles
+      // the theme, preset 2 / F2 force-refreshes the Unsplash background.
+      // Placed before the dialog branches so they work globally, even when
+      // the day sheet or event detail modal is open.
+      if (e.key === '1' || e.key === 'F1') {
+        toggleTheme();
+        return;
+      }
+      if (e.key === '2' || e.key === 'F2') {
+        void refreshBackground();
+        return;
+      }
       if (detail) {
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
           e.preventDefault();
@@ -526,7 +538,7 @@ export default function App() {
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKey);
     };
-  }, [goMonth, goToday, moveFocus, pressFocused, detail, sheetOpen, selectedEvents]);
+  }, [goMonth, goToday, moveFocus, pressFocused, detail, sheetOpen, selectedEvents, toggleTheme, refreshBackground]);
 
   // Glide the selection circle to the focused cell after every render that
   // could have moved it. Runs pre-paint, so the first frame is already right.
@@ -683,35 +695,6 @@ export default function App() {
         {backdropUrl && (
           <div className="absolute inset-0" style={{ background: 'rgba(24,10,10,0.38)' }} />
         )}
-      </div>
-      {/* 0.2.24: theme toggle + background refresh buttons. Top-right,
-          small and semi-transparent; pointer events isolated so they never
-          interfere with the calendar grid or knob navigation. */}
-      <div className="pointer-events-none absolute top-3 right-3 z-[10] flex gap-2">
-        <button
-          onClick={toggleTheme}
-          aria-label={config?.theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
-          title={config?.theme === 'dark' ? 'Light theme' : 'Dark theme'}
-          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/25 text-off-white backdrop-blur-sm active:bg-black/45"
-        >
-          <span className="text-[1.1rem] leading-none" aria-hidden>
-            {config?.theme === 'dark' ? '☀' : '☾'}
-          </span>
-        </button>
-        <button
-          onClick={refreshBackground}
-          aria-label="New background image"
-          title="New background image"
-          disabled={refreshingBg}
-          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/25 text-off-white backdrop-blur-sm active:bg-black/45 disabled:opacity-50"
-        >
-          <span
-            className={`text-[1.1rem] leading-none ${refreshingBg ? 'animate-spin' : ''}`}
-            aria-hidden
-          >
-            ⟳
-          </span>
-        </button>
       </div>
       {/* clock panel: left in landscape, top in portrait */}
       <section

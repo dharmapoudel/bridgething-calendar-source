@@ -1,3 +1,7 @@
+## 0.2.25
+
+Car Thing hardware preset buttons: preset button 1 (or F1) toggles the theme, preset button 2 (or F2) force-refreshes the background from Unsplash. Both work globally, even when the day sheet or event detail dialog is open. The on-screen theme/background buttons from 0.2.24 were removed per user request — hardware buttons only now. The underlying toggleTheme()/refreshBackground() logic and the Unsplash background source are unchanged.
+
 ## 0.2.24
 
 Added two on-device buttons (top-right, small and semi-transparent): a theme toggle (sun/moon) that flips between dark and light theme instantly and persists the choice in localStorage (the webapp has no daemon config.set surface), and a background refresh button that force-pulls a random landscape photo from Unsplash. Background source switched from Bing picture-of-the-day to a curated list of 8 Unsplash landscape photo IDs (no API key); daily auto-refresh and per-day caching retained.
