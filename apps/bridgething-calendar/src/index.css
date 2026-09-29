@@ -8,6 +8,20 @@
   src: url("./fonts/Inter-Variable.ttf") format("truetype-variations");
 }
 
+/* Times New Roman stand-in for the big clock (metric-compatible). The Car
+   Thing ships no MS fonts, so this is bundled to guarantee the Times look.
+   Latin subset only: the clock renders digits and ":". */
+@font-face {
+  font-family: "Tinos";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("./fonts/Tinos-Regular.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
 /* script fallbacks so event titles in Devanagari (Hindi/Nepali) and Arabic
    render instead of tofu blocks; unicode-range keeps them out of the way of
    latin text */
@@ -225,6 +239,11 @@
   will-change: transform, opacity;
 }
 
+/* Daily Bing backdrop: fades in on first load and on the day-rollover swap. */
+.backdrop-swap {
+  animation: backdrop-in 600ms ease-out;
+}
+
 /* Day-focus selection circle: glides between cells with spring easing. */
 .select-circle {
   transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1);
@@ -237,7 +256,8 @@
   .month-in-fade,
   .modal-backdrop-in,
   .modal-pop,
-  .clock-fade {
+  .clock-fade,
+  .backdrop-swap {
     animation: none;
   }
   .select-circle {

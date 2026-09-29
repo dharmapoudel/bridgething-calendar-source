@@ -1,0 +1,5 @@
+Tinos (bundled as Tinos-Regular.woff2, latin subset)
+Copyright 2024 The Tinos Project Authors (https://github.com/google/fonts)
+Licensed under the Apache License, Version 2.0.
+Tinos is metric-compatible with Times New Roman; used here as the
+bundled stand-in for the "Times New Roman" clock typeface.

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { deviceTime, fetchText, getConfig, onConfigChanged } from './client';
+import { useDailyBackdrop } from './backdrop';
 import { FEED_COLORS, loadFeeds } from './ics';
 import {
   dateFromKey,
@@ -27,6 +28,12 @@ interface AppConfig {
 }
 
 const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+// Horizontal nudge (px) aligning the month name's left edge exactly with the
+// left edge of the "S" Sunday header glyph. Measured on an 800x480 render
+// with the bundled Inter (deterministic at this fixed viewport); positive
+// shifts the label right. Values set from render measurement (see build).
+const MONTH_NUDGE_LANDSCAPE = 22.2;
+const MONTH_NUDGE_PORTRAIT = 46.7;
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -127,6 +134,12 @@ export default function App() {
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const lineSwipeStart = useRef<{ x: number } | null>(null);
   const isPortrait = useIsPortrait();
+  // Daily Bing picture-of-the-day backdrop (blurred, cached per local day).
+  const backdropUrl = useDailyBackdrop(timeZone);
+  // Ref + fitted size for the big clock: Times is wide, so the clock shrinks
+  // to fit its panel when a long time (e.g. "12:45") would otherwise overflow.
+  const clockRef = useRef<HTMLDivElement | null>(null);
+  const [clockSize, setClockSize] = useState(isPortrait ? 115 : 158);
 
   // FLIP selection-circle plumbing: measure the focused day cell and glide
   // one absolutely-positioned circle to it (transform-only, spring easing).
@@ -428,6 +441,53 @@ export default function App() {
   // re-mount the clock on minute change so the digits fade in
   const minuteKey = clockMain;
 
+  // Fit the Times clock to its panel: start from the reference-height base
+  // size and shrink only if the rendered time would overflow. The fitted
+  // size lives in state (not an imperative style) so React re-renders don't
+  // clobber it back to the base size. Re-runs on every minute change (the
+  // clock re-mounts), on orientation change, and once webfonts arrive so
+  // the measurement uses Tinos, not a fallback.
+  // Fit the Times clock to its panel: start from the reference-height base
+  // size and shrink only if the rendered time would overflow. The time string
+  // is measured at base size in an off-screen probe so the live element is
+  // never touched imperatively: React owns its style, and an imperative
+  // reset would clobber an already-applied fit without a state change to
+  // re-apply it. Re-runs on every minute change (the clock re-mounts), on
+  // orientation change, and once webfonts arrive so the measurement uses
+  // Tinos, not a fallback.
+  useLayoutEffect(() => {
+    const el = clockRef.current;
+    if (!el) return;
+    const base = isPortrait ? 115 : 158;
+    const doFit = () => {
+      const probe = document.createElement('div');
+      const cs = getComputedStyle(el);
+      probe.style.position = 'absolute';
+      probe.style.visibility = 'hidden';
+      probe.style.whiteSpace = 'nowrap';
+      probe.style.fontFamily = cs.fontFamily;
+      probe.style.fontWeight = cs.fontWeight;
+      probe.style.fontSize = `${base}px`;
+      probe.textContent = minuteKey;
+      document.body.appendChild(probe);
+      const w = probe.getBoundingClientRect().width;
+      probe.remove();
+      const fit = w > el.clientWidth + 1 ? Math.floor((base * el.clientWidth) / w) : base;
+      setClockSize(prev => (Math.abs(prev - fit) < 1 ? prev : fit));
+    };
+    doFit();
+    let raf = 0;
+    if (document.fonts?.ready) {
+      void document.fonts.ready.then(() => {
+        raf = requestAnimationFrame(doFit);
+      });
+    }
+    return () => cancelAnimationFrame(raf);
+    // config gate: on first mount config is null and the early return renders
+    // no clock div, so the ref is empty; re-run once config lands and the
+    // clock actually mounts, otherwise the fit silently never happens.
+  }, [minuteKey, isPortrait, config !== null]);
+
   if (!config) {
     return (
       <div className="grid h-full w-full place-items-center bg-bg font-body text-body text-dim">
@@ -525,10 +585,31 @@ export default function App() {
   );
 
   return (
-    <div className={`flex h-full w-full ${isPortrait ? 'flex-col' : 'flex-row'} bg-bg text-off-white`}>
+    <div
+      className={`relative flex h-full w-full ${isPortrait ? 'flex-col' : 'flex-row'} text-off-white`}
+    >
+      {/* Daily Bing backdrop (blurred photo of the day) + warm dark scrim.
+          Both render only when an image is cached; otherwise the body's flat
+          rose shows through as the fallback. */}
+      <div aria-hidden className="pointer-events-none fixed inset-0" style={{ zIndex: 0 }}>
+        {backdropUrl && (
+          <div
+            key={backdropUrl}
+            className="backdrop-swap absolute inset-0"
+            style={{
+              backgroundImage: `url(${backdropUrl})`,
+              backgroundSize: 'cover',
+              backgroundPosition: 'center',
+            }}
+          />
+        )}
+        {backdropUrl && (
+          <div className="absolute inset-0" style={{ background: 'rgba(24,10,10,0.38)' }} />
+        )}
+      </div>
       {/* clock panel: left in landscape, top in portrait */}
       <section
-        className={`flex shrink-0 flex-col ${
+        className={`relative z-[1] flex shrink-0 flex-col ${
           isPortrait ? 'h-[40%] w-full px-6 pt-5 pb-4' : 'w-[40%] px-7 py-6'
         }`}
       >
@@ -537,8 +618,13 @@ export default function App() {
         </div>
         <div
           key={minuteKey}
-          className="clock-fade mt-2 font-body font-light leading-none tracking-tight text-off-white"
-          style={{ fontSize: isPortrait ? 64 : 88 }}
+          ref={clockRef}
+          className="clock-fade mt-2 leading-none whitespace-nowrap text-off-white"
+          style={{
+            fontFamily: '"Times New Roman", Tinos, "Liberation Serif", Times, serif',
+            fontWeight: 400,
+            fontSize: clockSize,
+          }}
         >
           {clockMain}
         </div>
@@ -569,13 +655,19 @@ export default function App() {
 
       {/* month grid */}
       <main
-        className={`flex min-h-0 flex-col ${isPortrait ? 'h-[60%] w-full px-5 pb-3' : 'flex-1 px-6 pb-4'}`}
+        className={`relative z-[1] flex min-h-0 flex-col ${
+          isPortrait ? 'h-[60%] w-full pl-6 pr-10 pt-4 pb-8' : 'flex-1 pl-8 pr-14 pt-6 pb-10'
+        }`}
         style={{ touchAction: 'pan-x' }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
         <div className="flex shrink-0 items-center py-3">
-          <div className="font-body text-[1.25rem] font-medium text-off-white">
+          <div
+            data-month-label
+            className="font-body text-[1.25rem] font-medium text-off-white"
+            style={{ marginLeft: isPortrait ? MONTH_NUDGE_PORTRAIT : MONTH_NUDGE_LANDSCAPE }}
+          >
             {MONTH_NAMES[viewMonth]}
           </div>
         </div>
@@ -583,6 +675,7 @@ export default function App() {
           {WEEKDAY_LETTERS.map((letter, i) => (
             <div
               key={i}
+              data-dow={i}
               className="pb-2 text-center font-body text-[0.8rem] text-dim"
             >
               {letter}
