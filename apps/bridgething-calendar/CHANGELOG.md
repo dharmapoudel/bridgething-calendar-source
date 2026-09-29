@@ -1,3 +1,7 @@
+## 0.2.15
+
+Settings page now displays the default ICS feeds when none are configured; empty stored values fall back to manifest defaults for all settings.
+
 ## 0.2.14
 
 Fix all settings: ics_feeds now falls back to default feeds when empty (fixes events not showing after upgrade); week_start now actually controls the calendar's first day; countdown_minutes now shows a countdown for imminent events.

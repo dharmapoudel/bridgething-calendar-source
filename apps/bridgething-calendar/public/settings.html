@@ -284,7 +284,7 @@
   }
 
   var feedListEl;
-  function buildFeedsSection(values) {
+  function buildFeedsSection(values, fields) {
     var sec = el('section');
     sec.appendChild(el('h2', null, 'Calendar feeds'));
     var hint = el('p', 'hint', 'Add one feed per calendar. Tap + to add another.');
@@ -292,7 +292,14 @@
     var card = el('div', 'card');
     feedListEl = el('div');
     card.appendChild(feedListEl);
-    var existing = (values['ics_feeds'] || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
+    var feedsField = null;
+    for (var i = 0; i < fields.length; i++) {
+      if ((fields[i].data || {}).key === 'ics_feeds') { feedsField = fields[i]; break; }
+    }
+    var defaultFeeds = feedsField && feedsField.data ? feedsField.data.default : null;
+    var rawFeeds = values['ics_feeds'];
+    if ((!rawFeeds || !String(rawFeeds).trim()) && defaultFeeds) rawFeeds = defaultFeeds;
+    var existing = (rawFeeds || '').split('\n').map(function (s) { return s.trim(); }).filter(Boolean);
     if (existing.length === 0) existing = [''];
     existing.forEach(function (u) { addFeedRow(u); });
     var add = el('button', 'add-btn', '+ Add feed');
@@ -386,7 +393,7 @@
       var data = f.data || {};
       var key = data.key;
       var raw = values[key];
-      var value = raw !== undefined && raw !== null ? String(raw)
+      var value = raw !== undefined && raw !== null && String(raw) !== '' ? String(raw)
         : data.default !== undefined && data.default !== null ? String(data.default) : '';
       if (f.type === 'boolean') {
         var built = genericControl(f, value);
@@ -423,7 +430,7 @@
         app.appendChild(sub);
 
         var feedsField = fields.find(function (f) { return (f.data || {}).key === 'ics_feeds'; });
-        if (feedsField) app.appendChild(buildFeedsSection(values));
+        if (feedsField) app.appendChild(buildFeedsSection(values, fields));
         var gen = buildGenericSection(fields, values);
         if (gen) app.appendChild(gen);
 
