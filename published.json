@@ -61,6 +61,17 @@
         "size": 18069,
         "sha256": "9ea8ff28cac1c73c955f63aa3c470714e89ac5fdad64f8a0bbb7d4de5844cdb8"
       }
+    },
+    "0.2.31": {
+      "released_at": "2026-09-29T23:51:16.733Z",
+      "sha256": "85012eaa1da53e2793266ca48d9ef7a329967116c630744e520f2985cfe5b3ed",
+      "size": 1214700,
+      "file": "r/01a0890e-4a23-7000-bd4e-439997d71981/0.2.31.zip",
+      "settings": {
+        "file": "s/01a0890e-4a23-7000-bd4e-439997d71981/0.2.31.html",
+        "size": 17946,
+        "sha256": "5befc93d77a9436a752a107946abf1307dc18cdd6035be72427f978e730a40b8"
+      }
     }
   }
 }
