@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.4
+- Reverted to the 0.2.1 layout. Main clock only: Inter Light at 145px (105px portrait) with a 0.58x horizontal compression (scaleX) to match the reference mockup's thin, narrow digits.
+- Airier date grid: extra top padding above the date rows, more bottom padding below the last row, and wider right padding between the last date column and the panel edge (landscape and portrait).
+- Verified the month name's left edge aligns exactly with the first (Sunday) date column's left edge; no shift needed.
+
 ## 0.2.1
 - Match the reference mockup exactly: flat muted-rose theme (#8C5858), warm-white text, Inter throughout.
 - Removed week numbers, Today button, month arrows, sync footer, pinned agenda, event dots, today highlight, AM/PM on the clock.

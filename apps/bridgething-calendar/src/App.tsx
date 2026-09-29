@@ -535,12 +535,17 @@ export default function App() {
         <div className="font-body text-[0.95rem] font-medium text-off-white">
           {dayHeaderLabel(selectedKey)}
         </div>
-        <div
-          key={minuteKey}
-          className="clock-fade mt-2 font-body font-light leading-none tracking-tight text-off-white"
-          style={{ fontSize: isPortrait ? 64 : 88 }}
-        >
-          {clockMain}
+        {/* clock-scale: the reference clock is thin AND horizontally compressed
+            (~0.58x). The scaleX wrapper keeps the clock-fade keyframes untouched
+            (they animate transform on the inner element). */}
+        <div style={{ transform: 'scaleX(0.58)', transformOrigin: 'left center' }}>
+          <div
+            key={minuteKey}
+            className="clock-fade mt-2 font-body font-light leading-none tracking-tight text-off-white"
+            style={{ fontSize: isPortrait ? 105 : 145 }}
+          >
+            {clockMain}
+          </div>
         </div>
         {/* one-line next-event carousel: swipe to see more */}
         <div
@@ -569,7 +574,7 @@ export default function App() {
 
       {/* month grid */}
       <main
-        className={`flex min-h-0 flex-col ${isPortrait ? 'h-[60%] w-full px-5 pb-3' : 'flex-1 px-6 pb-4'}`}
+        className={`flex min-h-0 flex-col ${isPortrait ? 'h-[60%] w-full pl-5 pr-8 pb-6' : 'flex-1 pl-6 pr-10 pb-8'}`}
         style={{ touchAction: 'pan-x' }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
@@ -592,7 +597,7 @@ export default function App() {
         <div
           key={`${viewYear}-${viewMonth}`}
           ref={gridWrapRef}
-          className={`relative grid min-h-0 flex-1 gap-1 ${navAnimClass}`}
+          className={`relative grid min-h-0 flex-1 gap-1 pt-4 ${navAnimClass}`}
           style={{ gridTemplateRows: `repeat(${grid.length}, minmax(0, 1fr))` }}
         >
           {circle && (
