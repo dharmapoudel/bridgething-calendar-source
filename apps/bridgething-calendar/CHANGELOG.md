@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.6
+- Big clock is now Inter Bold (700) at 72px with -2% letter-spacing.
+
 ## 0.2.5
 - Daily Bing picture-of-the-day backdrop: fetched fresh every day through the daemon net proxy, blurred and darkened at runtime, cached per local day in localStorage (zero network when today's image is cached); falls back to the flat rose when nothing is cached and keeps the previous image on any failure.
 - Big clock is now Times New Roman (bundled Tinos, metric-compatible, since the Car Thing ships no MS fonts), hardcoded at 158px with weight 400.

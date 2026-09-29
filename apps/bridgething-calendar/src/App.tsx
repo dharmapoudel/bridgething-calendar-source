@@ -567,9 +567,10 @@ export default function App() {
           key={minuteKey}
           className="clock-fade mt-2 leading-none whitespace-nowrap text-off-white"
           style={{
-            fontFamily: '"Times New Roman", Tinos, "Liberation Serif", Times, serif',
-            fontWeight: 400,
-            fontSize: 158,
+            fontFamily: '"Inter", "Noto Sans Devanagari", "Noto Sans Arabic", system-ui, sans-serif',
+            fontWeight: 700,
+            fontSize: 72,
+            letterSpacing: '-0.02em',
           }}
         >
           {clockMain}
