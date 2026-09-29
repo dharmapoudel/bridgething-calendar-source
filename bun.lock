@@ -12,7 +12,7 @@
     },
     "apps/bridgething-calendar": {
       "name": "bridgething-calendar",
-      "version": "0.2.23",
+      "version": "0.2.24",
       "dependencies": {
         "@bridgething/client": "^0.12.1",
         "preact": "^10.29.7",

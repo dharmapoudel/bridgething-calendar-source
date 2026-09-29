@@ -45,6 +45,10 @@ const DEFAULT_FEEDS: string[] = [
 ];
 
 const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
+// localStorage key for the on-device theme toggle (0.2.24). Stores the
+// DISPLAYED theme directly, bypassing the 0.2.18 flip. The webapp cannot
+// write daemon config (no config.set surface), so the toggle persists here.
+const THEME_OVERRIDE_KEY = 'themeOverride';
 // Horizontal nudge (px) aligning the month name's left edge exactly with the
 // left edge of the "S" Sunday header glyph. Positive shifts the label right.
 const MONTH_NUDGE_LANDSCAPE = 22.2;
@@ -71,7 +75,15 @@ function parseConfig(raw: {
   // NOTE (0.2.18): interpretation is intentionally flipped per user report —
   // the companion app displays the inverse of what the device applied, so
   // stored 'light' applies the dark theme and vice versa.
-  const theme = rawTheme === 'light' ? 'dark' : rawTheme === 'dark' ? 'light' : 'dark';
+  // NOTE (0.2.24): a localStorage override from the on-device theme toggle
+  // button bypasses the flip — it stores the DISPLAYED theme directly.
+  let theme: 'dark' | 'light' = rawTheme === 'light' ? 'dark' : rawTheme === 'dark' ? 'light' : 'dark';
+  try {
+    const override = localStorage.getItem(THEME_OVERRIDE_KEY);
+    if (override === 'dark' || override === 'light') theme = override;
+  } catch {
+    // localStorage unavailable: fall through to daemon-derived theme.
+  }
   const weekStart = (raw.weekStart || '').trim().toLowerCase() === 'sunday' ? 0 : 1;
   const countdownMinutes = clampInt(raw.countdown, 30, 5, 180);
   return { feeds, refreshMinutes, theme, weekStart, countdownMinutes };
@@ -158,8 +170,9 @@ export default function App() {
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const lineSwipeStart = useRef<{ x: number } | null>(null);
   const isPortrait = useIsPortrait();
-  // Daily Bing picture-of-the-day backdrop (blurred, cached per local day).
-  const backdropUrl = useDailyBackdrop(timeZone);
+  // Daily Unsplash landscape backdrop (blurred, cached per local day).
+  // Second element force-pulls a fresh random image (manual refresh button).
+  const [backdropUrl, refreshBackdrop] = useDailyBackdrop(timeZone);
 
   // FLIP selection-circle plumbing: measure the focused day cell and glide
   // one absolutely-positioned circle to it (transform-only, spring easing).
@@ -182,6 +195,35 @@ export default function App() {
     ]);
     setConfig(parseConfig({ feeds, refresh, theme, weekStart, countdown }));
   }, []);
+
+  // Theme toggle (0.2.24): flips the DISPLAYED theme. The webapp has no
+  // config.set surface, so the choice persists in localStorage (see
+  // THEME_OVERRIDE_KEY) and applies instantly via dataset.theme.
+  const toggleTheme = useCallback(() => {
+    setConfig(prev => {
+      if (!prev) return prev;
+      const next = prev.theme === 'dark' ? 'light' : 'dark';
+      try {
+        localStorage.setItem(THEME_OVERRIDE_KEY, next);
+      } catch {
+        // storage unavailable: the in-memory flip still applies this session.
+      }
+      document.documentElement.dataset.theme = next;
+      return { ...prev, theme: next };
+    });
+  }, []);
+
+  // Background refresh (0.2.24): force-pull a random Unsplash landscape.
+  const [refreshingBg, setRefreshingBg] = useState(false);
+  const refreshBackground = useCallback(async () => {
+    if (refreshingBg) return;
+    setRefreshingBg(true);
+    try {
+      await refreshBackdrop();
+    } finally {
+      setRefreshingBg(false);
+    }
+  }, [refreshBackdrop, refreshingBg]);
 
   const loadFeedsNow = useCallback(async (cfg: AppConfig) => {
     if (cfg.feeds.length === 0) return;
@@ -641,6 +683,35 @@ export default function App() {
         {backdropUrl && (
           <div className="absolute inset-0" style={{ background: 'rgba(24,10,10,0.38)' }} />
         )}
+      </div>
+      {/* 0.2.24: theme toggle + background refresh buttons. Top-right,
+          small and semi-transparent; pointer events isolated so they never
+          interfere with the calendar grid or knob navigation. */}
+      <div className="pointer-events-none absolute top-3 right-3 z-[10] flex gap-2">
+        <button
+          onClick={toggleTheme}
+          aria-label={config?.theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'}
+          title={config?.theme === 'dark' ? 'Light theme' : 'Dark theme'}
+          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/25 text-off-white backdrop-blur-sm active:bg-black/45"
+        >
+          <span className="text-[1.1rem] leading-none" aria-hidden>
+            {config?.theme === 'dark' ? '☀' : '☾'}
+          </span>
+        </button>
+        <button
+          onClick={refreshBackground}
+          aria-label="New background image"
+          title="New background image"
+          disabled={refreshingBg}
+          className="pointer-events-auto flex h-9 w-9 items-center justify-center rounded-full bg-black/25 text-off-white backdrop-blur-sm active:bg-black/45 disabled:opacity-50"
+        >
+          <span
+            className={`text-[1.1rem] leading-none ${refreshingBg ? 'animate-spin' : ''}`}
+            aria-hidden
+          >
+            ⟳
+          </span>
+        </button>
       </div>
       {/* clock panel: left in landscape, top in portrait */}
       <section

@@ -1,23 +1,41 @@
-// Daily Bing picture-of-the-day backdrop, cached per local day.
+// Daily Unsplash landscape backdrop, cached per local day.
 //
 // On launch: if localStorage holds today's image, it is applied with zero
-// network traffic. Otherwise the image is fetched through the daemon net
-// proxy (same path as the ICS feeds), blurred + darkened on an offscreen
-// canvas, and cached as a JPEG data URL. Every 30 minutes the hook re-checks
-// whether the local day has rolled over and, if so, swaps in the fresh
-// image in the background. Any failure keeps the previous image (even if
-// stale); with no cache at all the hook returns null and the app falls back
-// to the flat rose background.
+// network traffic. Otherwise a random landscape photo is fetched from
+// Unsplash (curated ID list, no API key) through the daemon net proxy (same
+// path as the ICS feeds), blurred + darkened on an offscreen canvas, and
+// cached as a JPEG data URL. Every 30 minutes the hook re-checks whether the
+// local day has rolled over and, if so, swaps in a fresh random image in the
+// background. A manual refresh button can force-pull a new random image at
+// any time. Any failure keeps the previous image (even if stale); with no
+// cache at all the hook returns null and the app falls back to the flat
+// rose background.
 
-import { useEffect, useState } from 'react';
-import { fetchText, getClient } from './client';
+import { useCallback, useEffect, useState } from 'react';
+import { getClient } from './client';
 import { todayKeyFor } from './model';
 
-const DATE_KEY = 'bingBackdropDate';
-const DATA_KEY = 'bingBackdropDataUrl';
-const ARCHIVE_URL = 'https://www.bing.com/HPImageArchive.aspx?format=js&idx=0&n=1&mkt=en-US';
+const DATE_KEY = 'unsplashBackdropDate';
+const DATA_KEY = 'unsplashBackdropDataUrl';
 const CHECK_MS = 30 * 60 * 1000;
 const BLUR_PX = 28;
+
+// Curated Unsplash landscape photo IDs (stable, no API key needed).
+const UNSPLASH_IDS = [
+  'photo-1506905925346-21bda4d32df4', // mountain
+  'photo-1469474968028-56623f02e42e', // sunlight landscape
+  'photo-1447752875215-b2761acb3c5d', // forest
+  'photo-1433086966358-54859d0ed716', // waterfall
+  'photo-1501594907352-04cda38ebc29', // lake tahoe
+  'photo-1470071459604-3b5ec3a7fe05', // foggy hills
+  'photo-1441974231531-c6227db76b6e', // forest road
+  'photo-1472214103451-9374bd1c798e', // field sunset
+];
+
+function randomUnsplashUrl(): string {
+  const id = UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)];
+  return `https://images.unsplash.com/${id}?w=800&h=480&fit=crop&q=80`;
+}
 
 function readCache(): { date: string | null; dataUrl: string | null } {
   try {
@@ -132,22 +150,36 @@ async function processImage(bytes: Uint8Array): Promise<string> {
 }
 
 async function fetchFresh(): Promise<string> {
-  const raw = await fetchText(ARCHIVE_URL);
-  let path: string | null = null;
-  try {
-    path = JSON.parse(raw).images?.[0]?.url ?? null;
-  } catch {
-    path = null;
-  }
-  if (!path) throw new Error('no Bing image url in archive response');
-  const bytes = await fetchBytes(`https://www.bing.com${path}`);
+  const bytes = await fetchBytes(randomUnsplashUrl());
   return processImage(bytes);
+}
+
+// Force-pull a new random Unsplash landscape, cache it under today's date,
+// and return the processed data URL. Exported for the manual refresh button.
+// Never throws: on failure it rethrows so the caller can keep the old image.
+export async function refreshBackdropNow(timeZone: string | undefined): Promise<string> {
+  const day = todayKeyFor(Date.now(), timeZone);
+  const fresh = await fetchFresh();
+  writeCache(day, fresh);
+  return fresh;
 }
 
 // Returns the current backdrop as a JPEG data URL, or null when no image is
 // cached (the app then falls back to the flat rose background). Never throws.
-export function useDailyBackdrop(timeZone: string | undefined): string | null {
+// The second element forces a fresh random Unsplash pull (used by the manual
+// refresh button); it resolves to the new data URL or null on failure.
+export function useDailyBackdrop(timeZone: string | undefined): [string | null, () => Promise<string | null>] {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
+
+  const forceRefresh = useCallback(async (): Promise<string | null> => {
+    try {
+      const fresh = await refreshBackdropNow(timeZone);
+      setDataUrl(fresh);
+      return fresh;
+    } catch {
+      return null;
+    }
+  }, [timeZone]);
 
   useEffect(() => {
     let alive = true;
@@ -188,5 +220,5 @@ export function useDailyBackdrop(timeZone: string | undefined): string | null {
     };
   }, [timeZone]);
 
-  return dataUrl;
+  return [dataUrl, forceRefresh];
 }

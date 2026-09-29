@@ -1,3 +1,7 @@
+## 0.2.24
+
+Added two on-device buttons (top-right, small and semi-transparent): a theme toggle (sun/moon) that flips between dark and light theme instantly and persists the choice in localStorage (the webapp has no daemon config.set surface), and a background refresh button that force-pulls a random landscape photo from Unsplash. Background source switched from Bing picture-of-the-day to a curated list of 8 Unsplash landscape photo IDs (no API key); daily auto-refresh and per-day caching retained.
+
 ## 0.2.23
 
 Dialog (day sheet/modal) now always uses dark theme via data-theme="dark" on the dialog containers (new [data-theme="dark"] CSS rule re-declares dark custom properties so dialogs stay dark regardless of app theme or background detection). Background detection now applies to ALL text: when the Bing photo is absent or fails to load, contrast falls back to the theme's own background color (light theme → dark text) instead of doing nothing. Date header verified already using full-contrast text-off-white.
