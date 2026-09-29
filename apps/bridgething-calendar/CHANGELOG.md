@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.3
+- Opacity refinements from bg-normalized reference measurements: next-event line is two-tone (time 69%, title 100%); Saturday column 50%, Sunday column 83%; weekday headers 48%.
+
+
 ## 0.2.2
 - Pixel-match the reference mockup: forensic re-measurement of every size and color.
 - Clock is now 140px Inter Light (was 84px); day header 25px and month title 26px Inter Medium.

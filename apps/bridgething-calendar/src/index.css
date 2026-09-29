@@ -46,6 +46,11 @@
   --color-rule-strong: rgb(253 249 247 / 0.28);
   --color-edge: rgb(253 249 247 / 0.32);
   --color-dim: rgb(253 249 247 / 0.58);
+
+  /* reference-measured ink weights: Saturday 50%, Sunday 83%, DOW headers 48% */
+  --color-dim-sat: rgb(253 249 247 / 0.5);
+  --color-dim-sun: rgb(253 249 247 / 0.83);
+  --color-dim-dow: rgb(253 249 247 / 0.48);
   --color-soft: #fdf9f7;
   --color-near: #fdf9f7;
 

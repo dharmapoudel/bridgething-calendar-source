@@ -579,8 +579,10 @@ export default function App() {
               }`}
               style={{ fontSize: px(24), lineHeight: 1.25 }}
             >
-              {formatTime(lineEvent.start, timeZone)}
-              {'  '}
+              <span style={{ opacity: 0.69 }}>
+                {formatTime(lineEvent.start, timeZone)}
+                {'  '}
+              </span>
               {truncateTitle(lineEvent.title, 26)}
             </button>
           ) : (
@@ -621,7 +623,7 @@ export default function App() {
             {WEEKDAY_LETTERS.map((letter, i) => (
               <div
                 key={i}
-                className="text-center font-body font-medium text-dim"
+                className="text-center font-body font-medium text-dim-dow"
                 style={{ fontSize: isPortrait ? 13 : 22 }}
               >
                 {letter}
@@ -674,9 +676,11 @@ export default function App() {
                       className={`relative z-[1] font-body font-medium leading-none ${
                         day.key === selectedKey
                           ? 'text-[var(--color-select-ink)]'
-                          : day.weekend
-                            ? 'text-dim'
-                            : 'text-off-white'
+                          : day.weekday === 6
+                            ? 'text-dim-sat'
+                            : day.weekday === 0
+                              ? 'text-dim-sun'
+                              : 'text-off-white'
                       }`}
                       style={{ fontSize: isPortrait ? 17 : 26 }}
                     >
