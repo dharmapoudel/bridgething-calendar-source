@@ -1,3 +1,7 @@
+## 0.2.19
+
+Softened the today/selected date indicator: dark mode uses soft rose accent (#f2c9c4) instead of bright white, light mode uses muted rose (#b35563) instead of near-black.
+
 ## 0.2.18
 
 Flipped theme setting interpretation per user report: stored 'light' now applies the dark theme and vice versa (to match the companion app's display). Empty/unset still defaults to dark.

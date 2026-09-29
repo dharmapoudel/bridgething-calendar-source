@@ -77,8 +77,8 @@
   --color-soft: #fbf4f2;
   --color-near: #fbf4f2;
 
-  /* day-focus selection circle: warm white with dark ink */
-  --color-select: #fbf4f2;
+  /* day-focus selection circle: soft rose accent with dark ink */
+  --color-select: #f2c9c4;
   --color-select-ink: #33272b;
 
   /* sheet / modal surface: a deeper rose than the flat background */
@@ -136,7 +136,7 @@
   --color-soft: #2b1d21;
   --color-near: #2b1d21;
 
-  --color-select: #2b1d21;
+  --color-select: #b35563;
   --color-select-ink: #f6ede6;
 
   --color-panel: #efe3d8;
