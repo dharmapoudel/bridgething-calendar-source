@@ -31,5 +31,5 @@
     "update": "bunx @bridgething/updater"
   },
   "type": "module",
-  "version": "0.2.6"
+  "version": "0.2.7"
 }

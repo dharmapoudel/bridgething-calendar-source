@@ -609,7 +609,7 @@ export default function App() {
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <div className="flex shrink-0 items-center py-3">
+        <div className={`flex shrink-0 items-center ${isPortrait ? 'py-3' : 'pb-3'}`}>
           <div
             className="font-body text-[1.25rem] font-medium text-off-white"
             style={{ marginLeft: isPortrait ? MONTH_NUDGE_PORTRAIT : MONTH_NUDGE_LANDSCAPE }}

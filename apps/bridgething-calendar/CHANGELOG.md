@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.7
+- Landscape: the "Monday 9/28" date header and the "September" month title now share the same top inset (the month title wrapper's top padding was removed in landscape only) so both lines sit at exactly the same height; portrait unchanged.
+
 ## 0.2.6
 - Big clock is now Inter Bold (700) at 72px with -2% letter-spacing.
 
