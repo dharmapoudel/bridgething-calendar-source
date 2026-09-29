@@ -56,6 +56,18 @@
         "step": 5
       },
       "type": "number"
+    },
+    {
+      "type": "enum",
+      "data": {
+        "key": "theme",
+        "label": "Theme",
+        "choices": [
+          "dark",
+          "light"
+        ],
+        "default": "dark"
+      }
     }
   ],
   "description": "Your calendars on your Car Thing. Month view, agenda, and a next-event countdown.",
@@ -66,5 +78,5 @@
   "permissions": [
     "net.fetch"
   ],
-  "version": "0.1.7"
+  "version": "0.2.0"
 }

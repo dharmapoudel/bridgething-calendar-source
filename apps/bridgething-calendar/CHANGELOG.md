@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.2.0
+
+- Redesign: minimal clock/calendar layout inspired by the reference mockup — big live clock with the focused day ("Friday 9/18") and a next-upcoming-event line on the left, month grid on the right with a white selection circle
+- Dark mode by default: muted dark rose theme, with an optional light theme in settings
+- Animations: month grid slides on month change, selection circle glides with spring easing, clock digits fade on minute change
+- Knob: rotate moves the day focus (Left/Right = day, Up/Down = week, crossing month edges steps months), press opens the focused day's events; knob scrolls the event list and detail modal
+- Portrait: clock panel on top (40%), month grid below (60%); event list in a bottom sheet
+
 ## 0.1.7
 
 - On-device portrait detection: the daemon pins the layout viewport at 800x480 and rotates the panel, so CSS (orientation: portrait) never matched on the Car Thing and the portrait layout never activated there. Detection now checks screen.orientation first (Radio 0.6.6 approach) with matchMedia as fallback; landscape unchanged

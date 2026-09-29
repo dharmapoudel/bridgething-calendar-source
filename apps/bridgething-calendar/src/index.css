@@ -38,24 +38,28 @@
 }
 
 @theme {
-  /* Catppuccin Mocha — the Omarchy default theme */
-  --color-off-white: #cdd6f4;
-  --color-bg: #1e1e2e;
-  --color-screen: #181825;
-  --color-fg: #cdd6f4;
-  --color-muted: #a6adc8;
-  --color-accent: #89b4fa;
+  /* Dark rose (default): muted dark rose/brown, warm white text */
+  --color-off-white: #f3e9e2;
+  --color-bg: #241a1e;
+  --color-screen: #2c1f24;
+  --color-fg: #f3e9e2;
+  --color-muted: #a68a80;
+  --color-accent: #e5a3ac;
   --color-ok: #a6e3a1;
   --color-err: #f38ba8;
   --color-warn: #fab387;
   --color-experimental: #fab387;
 
-  --color-rule: #313244;
-  --color-rule-strong: #45475a;
-  --color-edge: #585b70;
-  --color-dim: #6c7086;
-  --color-soft: #9399b2;
-  --color-near: #bac2de;
+  --color-rule: #453236;
+  --color-rule-strong: #544144;
+  --color-edge: #6b535a;
+  --color-dim: #7d635b;
+  --color-soft: #c0a89e;
+  --color-near: #e3d2c8;
+
+  /* day-focus selection circle: warm white with dark ink */
+  --color-select: #f6ede6;
+  --color-select-ink: #2b1d21;
 
   --color-accent-soft: color-mix(in srgb, var(--color-accent) 14%, transparent);
   --color-ok-soft: color-mix(in srgb, var(--color-ok) 14%, transparent);
@@ -84,6 +88,33 @@
   --tracking-tight-1: -0.01em;
 
   --radius-none: 0;
+}
+
+/* Light theme: warm paper. The data-theme attribute is set on
+   documentElement from the theme setting (dark by default). */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-off-white: #2b1d21;
+  --color-bg: #f6efe9;
+  --color-screen: #fffdfa;
+  --color-fg: #2b1d21;
+  --color-muted: #7d635b;
+  --color-accent: #b35563;
+  --color-ok: #4d8a4a;
+  --color-err: #c2456b;
+  --color-warn: #c47a3a;
+  --color-experimental: #c47a3a;
+
+  --color-rule: #e8d9d0;
+  --color-rule-strong: #d9c4b8;
+  --color-edge: #c0a89e;
+  --color-dim: #a68a80;
+  --color-soft: #6b535a;
+  --color-near: #3d2c32;
+
+  --color-select: #2b1d21;
+  --color-select-ink: #f6ede6;
 }
 
 @layer base {
@@ -158,6 +189,17 @@
   }
 }
 
+@keyframes clock-fade {
+  from {
+    opacity: 0.2;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .month-in-next {
   animation: month-in-next 260ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
@@ -180,12 +222,28 @@
   will-change: transform, opacity;
 }
 
+/* Big clock: fades in on each minute change (re-mounted via React key). */
+.clock-fade {
+  animation: clock-fade 380ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+/* Day-focus selection circle: glides between cells with spring easing. */
+.select-circle {
+  transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .month-in-next,
   .month-in-prev,
   .month-in-fade,
   .modal-backdrop-in,
-  .modal-pop {
+  .modal-pop,
+  .clock-fade {
     animation: none;
+  }
+  .select-circle {
+    transition: none;
   }
 }

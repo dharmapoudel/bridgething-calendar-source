@@ -1,11 +1,13 @@
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { deviceTime, fetchText, getConfig, onConfigChanged } from './client';
 import { FEED_COLORS, loadFeeds } from './ics';
 import {
+  dateFromKey,
   dateKey,
   eventsForDateKey,
   formatCountdown,
   formatKeyHeading,
+  formatTime,
   formatTimeRange,
   indexEventsByDate,
   isDeclined,
@@ -31,9 +33,10 @@ interface AppConfig {
   refreshMinutes: number;
   showWeekNumbers: boolean;
   showEventPanel: boolean;
+  theme: 'dark' | 'light';
 }
 
-const WEEKDAY_SHORT = ['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'];
+const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
   'July', 'August', 'September', 'October', 'November', 'December',
@@ -46,6 +49,7 @@ function parseConfig(raw: {
   refresh: string | null;
   showWeekNumbers: string | null;
   showEventPanel: string | null;
+  theme: string | null;
 }): AppConfig {
   const feeds = (raw.feeds || '')
     .split('\n')
@@ -56,7 +60,8 @@ function parseConfig(raw: {
   const refreshMinutes = clampInt(raw.refresh, 15, 5, 120);
   const showWeekNumbers = parseBool(raw.showWeekNumbers, true);
   const showEventPanel = parseBool(raw.showEventPanel, true);
-  return { feeds, weekStart, countdownMinutes, refreshMinutes, showWeekNumbers, showEventPanel };
+  const theme = (raw.theme || '').trim().toLowerCase() === 'light' ? 'light' : 'dark';
+  return { feeds, weekStart, countdownMinutes, refreshMinutes, showWeekNumbers, showEventPanel, theme };
 }
 
 function parseBool(raw: string | null, fallback: boolean): boolean {
@@ -127,6 +132,13 @@ function useIsPortrait(): boolean {
   return portrait;
 }
 
+// "Friday 9/18" style header for the focused/selected day.
+function dayHeaderLabel(key: string): string {
+  const d = dateFromKey(key, new Date());
+  const wd = d.toLocaleDateString(undefined, { weekday: 'long' });
+  return `${wd} ${d.getMonth() + 1}/${d.getDate()}`;
+}
+
 export default function App() {
   const [config, setConfig] = useState<AppConfig | null>(null);
   const [events, setEvents] = useState<CalEvent[]>([]);
@@ -149,11 +161,20 @@ export default function App() {
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const isPortrait = useIsPortrait();
 
+  // FLIP selection-circle plumbing: measure the focused day cell and glide
+  // one absolutely-positioned circle to it (transform-only, spring easing).
+  const gridWrapRef = useRef<HTMLDivElement | null>(null);
+  const cellRefs = useRef(new Map<string, HTMLButtonElement>());
+  const [circle, setCircle] = useState<{ x: number; y: number; s: number } | null>(null);
+  const listRef = useRef<HTMLDivElement | null>(null);
+  const sheetListRef = useRef<HTMLDivElement | null>(null);
+  const modalScrollRef = useRef<HTMLDivElement | null>(null);
+
   const loadConfig = useCallback(async () => {
     // URL params override companion config (testing, kiosk setups).
     const params = new URLSearchParams(window.location.search);
     const paramFeeds = params.get('ics_feeds');
-    const [feeds, weekStart, countdown, refresh, showWeekNumbers, showEventPanel] =
+    const [feeds, weekStart, countdown, refresh, showWeekNumbers, showEventPanel, theme] =
       await Promise.all([
         paramFeeds ?? getConfig('ics_feeds'),
         params.get('week_start') ?? getConfig('week_start'),
@@ -161,8 +182,9 @@ export default function App() {
         params.get('refresh_minutes') ?? getConfig('refresh_minutes'),
         params.get('show_week_numbers') ?? getConfig('show_week_numbers'),
         params.get('show_event_panel') ?? getConfig('show_event_panel'),
+        params.get('theme') ?? getConfig('theme'),
       ]);
-    setConfig(parseConfig({ feeds, weekStart, countdown, refresh, showWeekNumbers, showEventPanel }));
+    setConfig(parseConfig({ feeds, weekStart, countdown, refresh, showWeekNumbers, showEventPanel, theme }));
   }, []);
 
   const loadFeedsNow = useCallback(async (cfg: AppConfig) => {
@@ -228,6 +250,11 @@ export default function App() {
     };
   }, [loadConfig]);
 
+  // Apply the theme (dark by default) to the document root.
+  useEffect(() => {
+    document.documentElement.dataset.theme = config?.theme ?? 'dark';
+  }, [config?.theme]);
+
   // The first feed load usually races the daemon clock; once the phone's
   // timezone is known, re-expand so day buckets and times use it.
   const tzAppliedRef = useRef(false);
@@ -273,6 +300,12 @@ export default function App() {
 
   const state = syncState(syncedAtMs, now, (config?.refreshMinutes ?? 15) * 60);
 
+  // Event panel: pinned into the clock panel when the setting is on,
+  // otherwise a slide-over (landscape) / bottom sheet (portrait).
+  const panelPinned = config?.showEventPanel ?? false;
+  const panelVisible = panelPinned || panelOpen;
+  const gridCols = (config?.showWeekNumbers ?? true) ? 'grid-cols-[2rem_repeat(7,1fr)]' : 'grid-cols-7';
+
   const goMonth = useCallback((delta: number) => {
     interactedRef.current = true;
     navDirRef.current = { dir: delta > 0 ? 'next' : 'prev' };
@@ -290,7 +323,40 @@ export default function App() {
     setSelectedKey(dateKey(p.year, p.month - 1, p.day));
   }, [now]);
 
-  // knob (rotary wheel) steps months; arrow keys do the same
+  // Knob rotate moves the day focus; crossing a month edge steps the month
+  // (with the slide animation). Left/right = ±1 day, up/down = ±1 week.
+  const moveFocus = useCallback((deltaDays: number) => {
+    interactedRef.current = true;
+    const d = dateFromKey(selectedKey, new Date());
+    d.setDate(d.getDate() + deltaDays);
+    const y = d.getFullYear();
+    const mo = d.getMonth();
+    if (y !== viewYear || mo !== viewMonth) {
+      navDirRef.current = { dir: deltaDays > 0 ? 'next' : 'prev' };
+      setViewYear(y);
+      setViewMonth(mo);
+    }
+    setSelectedKey(keyForDate(d));
+  }, [selectedKey, viewYear, viewMonth]);
+
+  // Knob press on the focused day: open its events.
+  const pressFocused = useCallback(() => {
+    interactedRef.current = true;
+    if (detail) {
+      setDetail(null);
+      return;
+    }
+    if (isPortrait || !panelPinned) {
+      // events live in the sheet / slide-over
+      setPanelOpen(true);
+      return;
+    }
+    if (selectedEvents.length > 0) setDetail(selectedEvents[0]);
+  }, [detail, isPortrait, panelPinned, selectedEvents]);
+
+  // Knob (rotary) input arrives as arrow keys / Enter on the Car Thing.
+  // Context: modal open -> scroll it; sheet open -> scroll it; else move
+  // the day focus. Tap/click keeps working through the onClick handlers.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       if (detail) return;
@@ -299,15 +365,57 @@ export default function App() {
         goMonth(e.deltaX > 0 ? 1 : -1);
       }
     };
+    const scrollBy = (ref: React.RefObject<HTMLDivElement | null>, down: boolean) => {
+      ref.current?.scrollBy({ top: down ? 96 : -96, behavior: 'smooth' });
+    };
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
-      if (e.key === 'ArrowRight') goMonth(1);
-      else if (e.key === 'ArrowLeft') goMonth(-1);
-      else if (e.key === 't' || e.key === 'T') goToday();
-      else if (e.key === 'Escape') {
+      if (e.key === 'Escape') {
         if (detail) setDetail(null);
         else setPanelOpen(false);
+        return;
+      }
+      if (e.key === 't' || e.key === 'T') {
+        goToday();
+        return;
+      }
+      if (detail) {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          scrollBy(modalScrollRef, e.key === 'ArrowDown');
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          setDetail(null);
+        }
+        return;
+      }
+      if (!panelPinned && panelOpen) {
+        if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
+          e.preventDefault();
+          scrollBy(sheetListRef, e.key === 'ArrowDown');
+        } else if (e.key === 'Enter' || e.key === ' ') {
+          e.preventDefault();
+          if (selectedEvents.length > 0) setDetail(selectedEvents[0]);
+          else setPanelOpen(false);
+        }
+        return;
+      }
+      if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        moveFocus(1);
+      } else if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        moveFocus(-1);
+      } else if (e.key === 'ArrowDown') {
+        e.preventDefault();
+        moveFocus(7);
+      } else if (e.key === 'ArrowUp') {
+        e.preventDefault();
+        moveFocus(-7);
+      } else if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        pressFocused();
       }
     };
     window.addEventListener('wheel', onWheel, { passive: false });
@@ -316,14 +424,41 @@ export default function App() {
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKey);
     };
-  }, [goMonth, goToday, detail]);
+  }, [goMonth, goToday, moveFocus, pressFocused, detail, panelPinned, panelOpen, selectedEvents]);
 
-  const clockText = new Date(now).toLocaleTimeString(undefined, {
+  // Glide the selection circle to the focused cell after every render that
+  // could have moved it. Runs pre-paint, so the first frame is already right.
+  useLayoutEffect(() => {
+    const wrap = gridWrapRef.current;
+    const cell = cellRefs.current.get(selectedKey);
+    if (!wrap || !cell) {
+      setCircle(null);
+      return;
+    }
+    const wr = wrap.getBoundingClientRect();
+    const cr = cell.getBoundingClientRect();
+    const s = Math.max(0, Math.min(cr.width, cr.height) - 6);
+    const x = cr.left - wr.left + (cr.width - s) / 2;
+    const y = cr.top - wr.top + (cr.height - s) / 2;
+    setCircle(prev =>
+      prev && Math.abs(prev.x - x) < 0.5 && Math.abs(prev.y - y) < 0.5 && Math.abs(prev.s - s) < 0.5
+        ? prev
+        : { x, y, s },
+    );
+  }, [selectedKey, viewYear, viewMonth, grid, isPortrait]);
+
+  const clockDate = new Date(now);
+  const clockText = clockDate.toLocaleTimeString(undefined, {
     hour: 'numeric',
     minute: '2-digit',
     ...(timeZone ? { timeZone } : {}),
   });
-  const selectedHeading = formatKeyHeading(selectedKey);
+  const clockParts = (() => {
+    const m = clockText.match(/^(.*?)\s*([APap][Mm])?$/);
+    return { main: (m?.[1] ?? clockText).trim(), mer: (m?.[2] ?? '').toUpperCase() };
+  })();
+  // re-mount the clock on minute change so the digits fade in
+  const minuteKey = clockText;
 
   if (!config) {
     return (
@@ -332,12 +467,6 @@ export default function App() {
       </div>
     );
   }
-
-  // Event panel: pinned in the layout when the setting is on, otherwise a
-  // slide-over that opens when a date is tapped.
-  const panelPinned = config.showEventPanel;
-  const panelVisible = panelPinned || panelOpen;
-  const gridCols = config.showWeekNumbers ? 'grid-cols-[2rem_repeat(7,1fr)]' : 'grid-cols-7';
 
   const onDayClick = (key: string) => {
     interactedRef.current = true;
@@ -369,63 +498,123 @@ export default function App() {
     if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy)) goMonth(dx < 0 ? 1 : -1);
   };
 
-  return (
-    <div className="flex h-full w-full flex-col bg-bg text-off-white">
-      {/* header */}
-      <header className="flex h-[52px] shrink-0 items-center gap-3 border-b border-rule px-4">
-        <div className="flex items-center gap-1">
-          <button
-            onClick={() => goMonth(-1)}
-            className="rounded px-2 py-1 font-mono text-body text-dim active:bg-neutral-soft"
-            aria-label="Previous month"
-          >
-            ‹
-          </button>
-          <div className="min-w-36 text-center font-display text-month font-medium">
-            {MONTH_NAMES[viewMonth]} {viewYear}
-          </div>
-          <button
-            onClick={() => goMonth(1)}
-            className="rounded px-2 py-1 font-mono text-body text-dim active:bg-neutral-soft"
-            aria-label="Next month"
-          >
-            ›
-          </button>
-          <button
-            onClick={goToday}
-            className="ml-1 rounded border border-edge px-2 py-1 font-mono text-hint text-near active:bg-neutral-soft"
-          >
-            Today
-          </button>
-        </div>
-        <div className="ml-auto flex items-center gap-2 font-mono text-hint">
-          <span className="font-display text-title font-medium text-near">{clockText}</span>
-        </div>
-      </header>
+  const openNext = () => {
+    if (next) setDetail(next);
+  };
 
-      {/* next-event banner */}
-      {announcing && next && countdown && (
-        <div className="flex h-[44px] shrink-0 items-center gap-3 border-b border-rule bg-accent-soft px-4">
-          <div className="font-mono text-eyebrow uppercase tracking-[0.2em] text-accent">Next</div>
-          <button
-            className="min-w-0 flex-1 truncate text-left font-body text-row font-medium"
-            onClick={() => setDetail(next)}
-          >
-            {truncateTitle(next.title)} <span className="text-dim">· {countdown}</span>
-          </button>
+  const eventListBody = (listRefProp: React.RefObject<HTMLDivElement | null>) => (
+    <div ref={listRefProp} className="min-h-0 flex-1 overflow-y-auto">
+      {config.feeds.length === 0 ? (
+        <SetupGuide />
+      ) : refreshing && events.length === 0 ? (
+        <div className="p-4 font-mono text-body text-dim">Syncing calendars…</div>
+      ) : selectedEvents.length === 0 ? (
+        <div className="p-4 font-mono text-body text-dim">Nothing scheduled.</div>
+      ) : (
+        <ul className="divide-y divide-rule">
+          {selectedEvents.map(ev => (
+            <EventRow
+              key={ev.id}
+              event={ev}
+              timeZone={timeZone}
+              onOpen={() => setDetail(ev)}
+            />
+          ))}
+        </ul>
+      )}
+      {errors.length > 0 && (
+        <div className="border-t border-rule p-3">
+          {errors.map((err, i) => (
+            <div key={i} className="font-mono text-hint text-warn">
+              {err}
+            </div>
+          ))}
         </div>
       )}
+    </div>
+  );
 
+  return (
+    <div className={`flex h-full w-full ${isPortrait ? 'flex-col' : 'flex-row'} bg-bg text-off-white`}>
       {/* body */}
-      <div className={`relative flex min-h-0 flex-1 ${isPortrait ? "flex-col" : ""}`}>
-        {/* portrait: grid on top, agenda below (Weather-style column); landscape: unchanged row */}
+      <div className={`flex min-h-0 flex-1 ${isPortrait ? 'flex-col' : 'flex-row'}`}>
+        {/* clock / date panel: left in landscape, top in portrait */}
+        <section
+          className={`flex shrink-0 flex-col ${
+            isPortrait ? 'h-[40%] w-full px-6 pt-4 pb-3' : 'w-[40%] px-6 py-5'
+          }`}
+        >
+          <div className="font-mono text-eyebrow uppercase tracking-[0.2em] text-dim">
+            {dayHeaderLabel(selectedKey)}
+          </div>
+          <div
+            key={minuteKey}
+            className="clock-fade mt-1 font-display font-semibold leading-none tracking-tight-1 text-off-white"
+            style={{ fontSize: isPortrait ? 64 : 84 }}
+          >
+            {clockParts.main}
+            {clockParts.mer && (
+              <span className="ml-2 align-baseline font-mono font-normal text-dim" style={{ fontSize: '0.28em' }}>
+                {clockParts.mer}
+              </span>
+            )}
+          </div>
+          <button
+            onClick={openNext}
+            className="mt-auto w-full truncate pt-2 text-left font-body text-row text-near active:opacity-70"
+          >
+            {next ? (
+              <>
+                <span className="font-mono text-dim">{formatTime(next.start, timeZone)}</span>
+                {'  '}
+                <span className="font-medium">{truncateTitle(next.title, 26)}</span>
+                {countdown && <span className="text-dim"> · {countdown}</span>}
+              </>
+            ) : (
+              <span className="text-dim">No upcoming events</span>
+            )}
+          </button>
+          {/* pinned agenda list (landscape only; portrait uses the sheet) */}
+          {panelPinned && !isPortrait && (
+            <div className="mt-3 min-h-0 flex-1 border-t border-rule pt-1">
+              {eventListBody(listRef)}
+            </div>
+          )}
+        </section>
+
         {/* month grid */}
         <main
-          className={`flex min-w-0 ${isPortrait ? "h-[60%] w-full shrink-0" : "flex-1"} flex-col px-3 py-2`}
+          className={`flex min-h-0 flex-col px-4 pb-2 ${isPortrait ? 'h-[60%] w-full' : 'flex-1'}`}
           style={{ touchAction: 'pan-x' }}
           onTouchStart={onTouchStart}
           onTouchEnd={onTouchEnd}
         >
+          <div className="flex shrink-0 items-center gap-1 py-2">
+            <button
+              onClick={() => goMonth(-1)}
+              className="rounded px-2 py-1 font-mono text-body text-dim active:bg-neutral-soft"
+              aria-label="Previous month"
+            >
+              ‹
+            </button>
+            <div className="font-display text-month font-medium">
+              {MONTH_NAMES[viewMonth]}
+              <span className="ml-2 font-body text-body font-normal text-dim">{viewYear}</span>
+            </div>
+            <button
+              onClick={() => goMonth(1)}
+              className="rounded px-2 py-1 font-mono text-body text-dim active:bg-neutral-soft"
+              aria-label="Next month"
+            >
+              ›
+            </button>
+            <button
+              onClick={goToday}
+              className="ml-auto rounded border border-edge px-2 py-1 font-mono text-hint text-near active:bg-neutral-soft"
+            >
+              Today
+            </button>
+          </div>
           <div className={`grid shrink-0 ${gridCols} gap-1`}>
             {config.showWeekNumbers && <div />}
             {weekdayOrder(config.weekStart).map(wd => (
@@ -433,15 +622,33 @@ export default function App() {
                 key={wd}
                 className="pb-1 text-center font-mono text-eyebrow uppercase tracking-[0.15em] text-dim"
               >
-                {WEEKDAY_SHORT[wd]}
+                {WEEKDAY_LETTERS[wd]}
               </div>
             ))}
           </div>
           <div
             key={`${viewYear}-${viewMonth}`}
-            className={`grid min-h-0 flex-1 gap-1 ${navAnimClass}`}
+            ref={gridWrapRef}
+            className={`relative grid min-h-0 flex-1 gap-1 ${navAnimClass}`}
             style={{ gridTemplateRows: `repeat(${grid.length}, minmax(0, 1fr))` }}
           >
+            {circle && (
+              <div
+                aria-hidden
+                className="select-circle"
+                style={{
+                  position: 'absolute',
+                  left: 0,
+                  top: 0,
+                  width: circle.s,
+                  height: circle.s,
+                  borderRadius: 9999,
+                  transform: `translate(${circle.x}px, ${circle.y}px)`,
+                  background: 'var(--color-select)',
+                  zIndex: 0,
+                }}
+              />
+            )}
             {grid.map((week, wi) => (
               <div key={wi} className={`grid min-h-0 ${gridCols} gap-1`}>
                 {config.showWeekNumbers && (
@@ -454,24 +661,28 @@ export default function App() {
                   return (
                     <button
                       key={day.key}
+                      ref={el => {
+                        if (el) cellRefs.current.set(day.key, el);
+                        else cellRefs.current.delete(day.key);
+                      }}
                       onClick={() => onDayClick(day.key)}
-                      className={`relative flex min-h-0 flex-col items-center justify-center rounded border px-1 ${
-                        selected
-                          ? 'border-accent bg-accent-soft'
-                          : day.today
-                            ? 'border-edge'
-                            : 'border-transparent'
-                      } ${day.inMonth ? '' : 'opacity-35'} active:bg-neutral-soft`}
+                      className={`relative flex min-h-0 flex-col items-center justify-center rounded px-1 ${
+                        day.inMonth ? '' : 'opacity-35'
+                      } active:bg-neutral-soft`}
                     >
                       <span
-                        className={`font-display text-date leading-none font-medium ${
-                          day.today ? 'text-accent' : 'text-near'
+                        className={`relative z-[1] font-display text-date leading-none font-medium ${
+                          selected
+                            ? 'text-[var(--color-select-ink)]'
+                            : day.today
+                              ? 'text-accent'
+                              : 'text-near'
                         }`}
                       >
                         {day.day}
                       </span>
                       {day.dots.length > 0 && (
-                        <span className="mt-1 flex gap-1">
+                        <span className="relative z-[1] mt-1 flex gap-1">
                           {day.dots.map((c, i) => (
                             <span
                               key={i}
@@ -489,32 +700,27 @@ export default function App() {
           </div>
         </main>
 
-        {/* agenda */}
-        <aside
-          className={
-            panelPinned
-              ? isPortrait
-                ? 'flex h-[40%] w-full shrink-0 flex-col border-t border-rule bg-screen'
-                : 'flex w-72 shrink-0 flex-col border-l border-rule bg-screen'
-              : isPortrait
+        {/* event panel: bottom sheet in portrait, slide-over in landscape
+            (used when the panel is not pinned into the clock panel) */}
+        {(!panelPinned || isPortrait) && (
+          <aside
+            className={
+              isPortrait
                 ? `absolute inset-x-0 bottom-0 z-[5] flex max-h-[70%] w-full flex-col border-t border-rule bg-screen shadow-2xl transition-transform duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
-                    panelVisible ? 'translate-y-0'
-                    // +30px clears the footer below the body so the closed sheet hides fully
-                    : 'translate-y-[calc(100%+30px)]'
+                    panelVisible ? 'translate-y-0' : 'translate-y-[calc(100%+30px)]'
                   }`
                 : `absolute inset-y-0 right-0 z-[5] flex w-72 flex-col border-l border-rule bg-screen shadow-2xl transition-transform duration-[260ms] ease-[cubic-bezier(0.22,1,0.36,1)] will-change-transform ${
                     panelVisible ? 'translate-x-0' : 'translate-x-full'
                   }`
-          }
-        >
-          <div className="flex shrink-0 items-center border-b border-rule px-3 py-2">
-            <div className="min-w-0 flex-1">
-              <div className="font-mono text-eyebrow uppercase tracking-[0.2em] text-dim">
-                {selectedKey === todayKey ? 'Today' : 'Selected day'}
+            }
+          >
+            <div className="flex shrink-0 items-center border-b border-rule px-3 py-2">
+              <div className="min-w-0 flex-1">
+                <div className="font-mono text-eyebrow uppercase tracking-[0.2em] text-dim">
+                  {selectedKey === todayKey ? 'Today' : 'Selected day'}
+                </div>
+                <div className="truncate font-display text-title font-medium">{formatKeyHeading(selectedKey)}</div>
               </div>
-              <div className="truncate font-display text-title font-medium">{selectedHeading}</div>
-            </div>
-            {!panelPinned && (
               <button
                 onClick={() => setPanelOpen(false)}
                 aria-label="Close event panel"
@@ -522,38 +728,10 @@ export default function App() {
               >
                 ✕
               </button>
-            )}
-          </div>
-          <div className="min-h-0 flex-1 overflow-y-auto">
-            {config.feeds.length === 0 ? (
-              <SetupGuide />
-            ) : refreshing && events.length === 0 ? (
-              <div className="p-4 font-mono text-body text-dim">Syncing calendars…</div>
-            ) : selectedEvents.length === 0 ? (
-              <div className="p-4 font-mono text-body text-dim">Nothing scheduled.</div>
-            ) : (
-              <ul className="divide-y divide-rule">
-                {selectedEvents.map(ev => (
-                  <EventRow
-                    key={ev.id}
-                    event={ev}
-                    timeZone={timeZone}
-                    onOpen={() => setDetail(ev)}
-                  />
-                ))}
-              </ul>
-            )}
-            {errors.length > 0 && (
-              <div className="border-t border-rule p-3">
-                {errors.map((err, i) => (
-                  <div key={i} className="font-mono text-hint text-warn">
-                    {err}
-                  </div>
-                ))}
-              </div>
-            )}
-          </div>
-        </aside>
+            </div>
+            {eventListBody(sheetListRef)}
+          </aside>
+        )}
       </div>
 
       {/* footer: sync status sits bottom-right */}
@@ -602,7 +780,10 @@ export default function App() {
             {detail.location && (
               <div className="mt-1 font-body text-body text-dim">{detail.location}</div>
             )}
-            <div className="mt-3 min-h-0 flex-1 overflow-y-auto border-t border-rule pt-3 font-body text-body whitespace-pre-wrap text-near">
+            <div
+              ref={modalScrollRef}
+              className="mt-3 min-h-0 flex-1 overflow-y-auto border-t border-rule pt-3 font-body text-body whitespace-pre-wrap text-near"
+            >
               {detail.description ? <LinkifiedText text={detail.description} /> : 'No details.'}
             </div>
             <div className="mt-4 flex gap-2">
