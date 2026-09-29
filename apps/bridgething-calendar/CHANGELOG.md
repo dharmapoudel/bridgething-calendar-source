@@ -1,3 +1,7 @@
+## 0.2.13
+
+Default ICS feeds: US holidays (Google + CalendarLabs), Formula 1, EPL 2025-26, NFL, plus a Google calendar.
+
 # Changelog
 
 ## 0.2.12
