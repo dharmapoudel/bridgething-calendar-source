@@ -158,6 +158,8 @@ export default function App() {
   const [selectedKey, setSelectedKey] = useState(() => keyForDate(new Date()));
   const [detail, setDetail] = useState<CalEvent | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
+  // Arrival pulse on today's cell after goToday (0.2.26).
+  const [pulseToday, setPulseToday] = useState(false);
   // Swipeable next-event line: index into the upcoming list + swipe direction.
   const [lineIdx, setLineIdx] = useState(0);
   const [lineDir, setLineDir] = useState<'next' | 'prev'>('next');
@@ -169,6 +171,9 @@ export default function App() {
   const navDirRef = useRef<{ dir: 'next' | 'prev' | 'fade' }>({ dir: 'fade' });
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const lineSwipeStart = useRef<{ x: number } | null>(null);
+  // Knob long-press plumbing (0.2.26): Enter/Space held 600ms goes to today.
+  const pressTimer = useRef<number | null>(null);
+  const longPressFired = useRef(false);
   const isPortrait = useIsPortrait();
   // Daily Unsplash landscape backdrop (blurred, cached per local day).
   // Second element force-pulls a fresh random image (manual refresh button).
@@ -418,12 +423,32 @@ export default function App() {
 
   const goToday = useCallback(() => {
     interactedRef.current = true;
-    navDirRef.current = { dir: 'fade' };
     const p = zonedParts(now, timeZoneRef.current);
-    setViewYear(p.year);
-    setViewMonth(p.month - 1);
-    setSelectedKey(dateKey(p.year, p.month - 1, p.day));
-  }, [now]);
+    const tYear = p.year;
+    const tMonth = p.month - 1;
+    if (tYear !== viewYear || tMonth !== viewMonth) {
+      // Different month: slide the grid toward today (0.2.26). Future
+      // months slide in from the right (content moves left), past months
+      // from the left — a pleasant page-swipe instead of an instant cut.
+      navDirRef.current = {
+        dir: tYear > viewYear || (tYear === viewYear && tMonth > viewMonth) ? 'next' : 'prev',
+      };
+    } else {
+      // Same month: the grid doesn't re-mount, so no month animation is
+      // needed — the FLIP selection circle glides to today's cell via its
+      // CSS transition, plus a subtle arrival pulse (see pulseToday).
+      navDirRef.current = { dir: 'fade' };
+    }
+    setViewYear(tYear);
+    setViewMonth(tMonth);
+    setSelectedKey(dateKey(tYear, tMonth, p.day));
+    // Arrival pulse on today's cell (both cases): re-trigger by toggling.
+    setPulseToday(false);
+    requestAnimationFrame(() => {
+      requestAnimationFrame(() => setPulseToday(true));
+    });
+    window.setTimeout(() => setPulseToday(false), 550);
+  }, [now, viewYear, viewMonth]);
 
   // Knob rotate moves the day focus; crossing a month edge steps the month
   // (with the slide animation). Left/right = ±1 day, up/down = ±1 week.
@@ -459,6 +484,12 @@ export default function App() {
   // Context: detail modal open -> scroll it; day sheet open -> scroll it
   // or open the first event; else move the day focus. Tap/click keeps
   // working through the onClick handlers.
+  //
+  // Knob press (Enter/Space) is split across keydown/keyup for long-press
+  // detection (0.2.26): keydown starts a 600ms timer; keyup performs the
+  // short-press. If the timer fires first it goes to today and the keyup
+  // is suppressed. Short-press actions therefore live in onKeyUp, never
+  // in onKey.
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       if (detail) return;
@@ -470,6 +501,7 @@ export default function App() {
     const scrollBy = (ref: React.RefObject<HTMLDivElement | null>, down: boolean) => {
       ref.current?.scrollBy({ top: down ? 96 : -96, behavior: 'smooth' });
     };
+    const isPressKey = (e: KeyboardEvent) => e.key === 'Enter' || e.key === ' ';
     const onKey = (e: KeyboardEvent) => {
       const target = e.target as HTMLElement;
       if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
@@ -494,13 +526,24 @@ export default function App() {
         void refreshBackground();
         return;
       }
+      if (isPressKey(e)) {
+        e.preventDefault();
+        // Ignore OS auto-repeat; the first keydown owns the gesture.
+        if (e.repeat || pressTimer.current !== null) return;
+        pressTimer.current = window.setTimeout(() => {
+          pressTimer.current = null;
+          longPressFired.current = true;
+          // Long-press: close any open dialog and return to today.
+          setDetail(null);
+          setSheetOpen(false);
+          goToday();
+        }, 600);
+        return;
+      }
       if (detail) {
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
           e.preventDefault();
           scrollBy(modalScrollRef, e.key === 'ArrowDown');
-        } else if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          setDetail(null);
         }
         return;
       }
@@ -508,10 +551,6 @@ export default function App() {
         if (e.key === 'ArrowUp' || e.key === 'ArrowDown') {
           e.preventDefault();
           scrollBy(sheetListRef, e.key === 'ArrowDown');
-        } else if (e.key === 'Enter' || e.key === ' ') {
-          e.preventDefault();
-          if (selectedEvents.length > 0) setDetail(selectedEvents[0]);
-          else setSheetOpen(false);
         }
         return;
       }
@@ -527,16 +566,42 @@ export default function App() {
       } else if (e.key === 'ArrowUp') {
         e.preventDefault();
         moveFocus(-7);
-      } else if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
+      }
+    };
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (!isPressKey(e)) return;
+      const target = e.target as HTMLElement;
+      if (target && (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA')) return;
+      if (pressTimer.current !== null) {
+        window.clearTimeout(pressTimer.current);
+        pressTimer.current = null;
+      }
+      if (longPressFired.current) {
+        // Long-press already navigated to today; suppress the short-press.
+        longPressFired.current = false;
+        return;
+      }
+      // Short-press: the Enter/Space action the keydown handler used to do.
+      if (detail) {
+        setDetail(null);
+      } else if (sheetOpen) {
+        if (selectedEvents.length > 0) setDetail(selectedEvents[0]);
+        else setSheetOpen(false);
+      } else {
         pressFocused();
       }
     };
     window.addEventListener('wheel', onWheel, { passive: false });
     window.addEventListener('keydown', onKey);
+    window.addEventListener('keyup', onKeyUp);
     return () => {
       window.removeEventListener('wheel', onWheel);
       window.removeEventListener('keydown', onKey);
+      window.removeEventListener('keyup', onKeyUp);
+      // Note: the long-press timer is intentionally NOT cleared here. The
+      // effect re-registers every ~10s (clock tick); clearing would cancel
+      // a press in progress. Refs survive re-registration, so keyup still
+      // pairs with the keydown that started the timer.
     };
   }, [goMonth, goToday, moveFocus, pressFocused, detail, sheetOpen, selectedEvents, toggleTheme, refreshBackground]);
 
@@ -802,7 +867,7 @@ export default function App() {
           {circle && (
             <div
               aria-hidden
-              className="select-circle"
+              className={`select-circle ${pulseToday ? 'today-arrive' : ''}`}
               style={{
                 position: 'absolute',
                 left: 0,

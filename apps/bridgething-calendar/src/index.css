@@ -273,16 +273,34 @@
 }
 
 .month-in-next {
-  animation: month-in-next 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: month-in-next 350ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
 
 .month-in-prev {
-  animation: month-in-prev 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: month-in-prev 350ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
 .month-in-fade {
   animation: month-in-fade 200ms ease-out;
+}
+
+/* goToday arrival pulse (0.2.26): a soft glow ring blooms on today's cell
+   once the selection circle arrives. Box-shadow only — never touches the
+   inline transform that positions the circle. */
+@keyframes today-arrive {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-accent);
+    opacity: 0.55;
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+    opacity: 1;
+  }
+}
+
+.today-arrive {
+  animation: today-arrive 500ms ease-out;
 }
 
 .modal-backdrop-in {
@@ -315,6 +333,7 @@
   .month-in-next,
   .month-in-prev,
   .month-in-fade,
+  .today-arrive,
   .modal-backdrop-in,
   .modal-pop,
   .clock-fade,

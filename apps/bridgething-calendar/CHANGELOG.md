@@ -1,3 +1,7 @@
+## 0.2.26
+
+Knob long-press (600ms) navigates to today: holding the knob press now closes any open dialog and returns the calendar to today's date. Short-press behavior is unchanged (still opens the focused day's events / closes dialogs), just moved from keydown to keyup so a long-press doesn't double-trigger. The jump to today is animated, not instant: a different month slides the grid horizontally toward today (direction matches past/future, 350ms ease-out), and in the same month the selection circle glides to today's cell with a soft glow pulse on arrival.
+
 ## 0.2.25
 
 Car Thing hardware preset buttons: preset button 1 (or F1) toggles the theme, preset button 2 (or F2) force-refreshes the background from Unsplash. Both work globally, even when the day sheet or event detail dialog is open. The on-screen theme/background buttons from 0.2.24 were removed per user request — hardware buttons only now. The underlying toggleTheme()/refreshBackground() logic and the Unsplash background source are unchanged.
