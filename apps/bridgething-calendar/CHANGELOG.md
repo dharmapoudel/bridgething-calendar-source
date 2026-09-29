@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.11
+- Removed the dead "Show week numbers" and "Show event panel" settings from the companion-app settings schema (neither key is referenced by the app).
+
 ## 0.2.10
 - Proportional system: Monday header now matches September at 20px (nudge removed); panel padding symmetric top/bottom (40px landscape, 32px portrait month panel); DOW headers match date size (22px); clock = 2.5 x DOW row height (102.5px, top still glued to DOW top); event line's vertical center aligned to the last date row's center (landscape, 5-week grid).
 

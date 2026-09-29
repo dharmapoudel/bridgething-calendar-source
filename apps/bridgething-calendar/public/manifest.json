@@ -20,22 +20,6 @@
       "type": "enum"
     },
     {
-      "type": "boolean",
-      "data": {
-        "key": "show_week_numbers",
-        "label": "Show week numbers",
-        "default": true
-      }
-    },
-    {
-      "type": "boolean",
-      "data": {
-        "key": "show_event_panel",
-        "label": "Show event panel",
-        "default": true
-      }
-    },
-    {
       "data": {
         "default": 30,
         "key": "countdown_minutes",
@@ -78,5 +62,5 @@
   "permissions": [
     "net.fetch"
   ],
-  "version": "0.2.10"
+  "version": "0.2.11"
 }
