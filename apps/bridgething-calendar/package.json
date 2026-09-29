@@ -12,6 +12,7 @@
     "@types/react": "^19.2.10",
     "@types/react-dom": "^19.2.3",
     "@vitejs/plugin-react": "^6.1.1",
+    "esbuild": "^0.28.2",
     "fflate": "^0.8.2",
     "tailwindcss": "^4.3.3",
     "typescript": "^6.0.3",
@@ -31,5 +32,5 @@
     "update": "bunx @bridgething/updater"
   },
   "type": "module",
-  "version": "0.2.16"
+  "version": "0.2.17"
 }

@@ -73,7 +73,7 @@
   --color-rule: rgb(251 244 242 / 0.16);
   --color-rule-strong: rgb(251 244 242 / 0.28);
   --color-edge: rgb(251 244 242 / 0.32);
-  --color-dim: rgb(251 244 242 / 0.55);
+  --color-dim: rgb(251 244 242 / 0.78);
   --color-soft: #fbf4f2;
   --color-near: #fbf4f2;
 
@@ -132,7 +132,7 @@
   --color-rule: #e8d9d0;
   --color-rule-strong: #d9c4b8;
   --color-edge: #c0a89e;
-  --color-dim: rgb(43 29 33 / 0.55);
+  --color-dim: rgb(43 29 33 / 0.78);
   --color-soft: #2b1d21;
   --color-near: #2b1d21;
 

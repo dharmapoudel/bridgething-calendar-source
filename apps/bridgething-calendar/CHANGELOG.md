@@ -1,3 +1,7 @@
+## 0.2.17
+
+Fixed unreadable secondary text: increased --color-dim opacity from 0.55 to 0.78 in both dark and light themes (light mode was 3.6:1, failing WCAG AA). Note: color-scheme: dark was already set on :root in @layer base, so no change needed there (@theme blocks only accept custom properties).
+
 ## 0.2.16
 
 Next-event line now includes all-day events (holidays, games) instead of showing 'Nothing coming up'; all-day events display 'All day' instead of a time.
