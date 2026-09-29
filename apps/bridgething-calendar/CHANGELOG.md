@@ -1,3 +1,7 @@
+## 0.2.18
+
+Flipped theme setting interpretation per user report: stored 'light' now applies the dark theme and vice versa (to match the companion app's display). Empty/unset still defaults to dark.
+
 ## 0.2.17
 
 Fixed unreadable secondary text: increased --color-dim opacity from 0.55 to 0.78 in both dark and light themes (light mode was 3.6:1, failing WCAG AA). Note: color-scheme: dark was already set on :root in @layer base, so no change needed there (@theme blocks only accept custom properties).

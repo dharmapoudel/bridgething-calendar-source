@@ -67,7 +67,11 @@ function parseConfig(raw: {
     .filter(s => /^https:\/\//i.test(s) || /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])/i.test(s));
   const feeds = parsed.length === 0 ? DEFAULT_FEEDS : parsed;
   const refreshMinutes = clampInt(raw.refresh, 15, 5, 120);
-  const theme = (raw.theme || '').trim().toLowerCase() === 'light' ? 'light' : 'dark';
+  const rawTheme = (raw.theme || '').trim().toLowerCase();
+  // NOTE (0.2.18): interpretation is intentionally flipped per user report —
+  // the companion app displays the inverse of what the device applied, so
+  // stored 'light' applies the dark theme and vice versa.
+  const theme = rawTheme === 'light' ? 'dark' : rawTheme === 'dark' ? 'light' : 'dark';
   const weekStart = (raw.weekStart || '').trim().toLowerCase() === 'sunday' ? 0 : 1;
   const countdownMinutes = clampInt(raw.countdown, 30, 5, 180);
   return { feeds, refreshMinutes, theme, weekStart, countdownMinutes };
