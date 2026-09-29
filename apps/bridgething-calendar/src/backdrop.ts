@@ -1,15 +1,5 @@
-// Daily Unsplash landscape backdrop, cached per local day.
-//
-// On launch: if localStorage holds today's image, it is applied with zero
-// network traffic. Otherwise a random landscape photo is fetched from
-// Unsplash (curated ID list, no API key) through the daemon net proxy (same
-// path as the ICS feeds), blurred + darkened on an offscreen canvas, and
-// cached as a JPEG data URL. Every 30 minutes the hook re-checks whether the
-// local day has rolled over and, if so, swaps in a fresh random image in the
-// background. A manual refresh button can force-pull a new random image at
-// any time. Any failure keeps the previous image (even if stale); with no
-// cache at all the hook returns null and the app falls back to the flat
-// rose background.
+// Daily Unsplash landscape backdrop, cached per local day as a blurred JPEG data URL.
+// Failures keep the previous image; with no cache the hook returns null.
 
 import { useCallback, useEffect, useState } from 'react';
 import { getClient } from './client';
@@ -22,14 +12,14 @@ const BLUR_PX = 28;
 
 // Curated Unsplash landscape photo IDs (stable, no API key needed).
 const UNSPLASH_IDS = [
-  'photo-1506905925346-21bda4d32df4', // mountain
-  'photo-1469474968028-56623f02e42e', // sunlight landscape
-  'photo-1447752875215-b2761acb3c5d', // forest
-  'photo-1433086966358-54859d0ed716', // waterfall
-  'photo-1501594907352-04cda38ebc29', // lake tahoe
-  'photo-1470071459604-3b5ec3a7fe05', // foggy hills
-  'photo-1441974231531-c6227db76b6e', // forest road
-  'photo-1472214103451-9374bd1c798e', // field sunset
+  'photo-1506905925346-21bda4d32df4',
+  'photo-1469474968028-56623f02e42e',
+  'photo-1447752875215-b2761acb3c5d',
+  'photo-1433086966358-54859d0ed716',
+  'photo-1501594907352-04cda38ebc29',
+  'photo-1470071459604-3b5ec3a7fe05',
+  'photo-1441974231531-c6227db76b6e',
+  'photo-1472214103451-9374bd1c798e',
 ];
 
 function randomUnsplashUrl(): string {
@@ -57,8 +47,7 @@ function writeCache(date: string, dataUrl: string): void {
   }
 }
 
-// Binary fetch through the daemon net proxy. Text decoding would corrupt a
-// JPEG, so this returns the raw response bytes instead.
+// Binary fetch through the daemon net proxy (text decoding would corrupt the JPEG).
 async function fetchBytes(url: string): Promise<Uint8Array> {
   try {
     const res = await getClient().net.fetch(
@@ -83,16 +72,15 @@ async function fetchBytes(url: string): Promise<Uint8Array> {
     }
     return new Uint8Array(reply.response.body);
   } catch {
-    // no daemon reachable (plain browser): direct fetch.
+    // No daemon (plain browser): direct fetch.
     const res = await fetch(url);
     if (!res.ok) throw new Error(`image returned HTTP ${res.status}`);
     return new Uint8Array(await res.arrayBuffer());
   }
 }
 
-// Cover-draw the photo at 800x480, blur it, darken slightly for legibility,
-// and return a JPEG data URL. The blurred draw is overscanned so the blur
-// kernel never exposes transparent edges.
+// Cover-draw at 800x480, blur, darken slightly, return JPEG data URL. Overscanned
+// so the blur kernel never exposes transparent edges.
 async function processImage(bytes: Uint8Array): Promise<string> {
   const W = 800;
   const H = 480;
@@ -154,9 +142,7 @@ async function fetchFresh(): Promise<string> {
   return processImage(bytes);
 }
 
-// Force-pull a new random Unsplash landscape, cache it under today's date,
-// and return the processed data URL. Exported for the manual refresh button.
-// Never throws: on failure it rethrows so the caller can keep the old image.
+// Force-pull a new random Unsplash landscape, cache it under today's date.
 export async function refreshBackdropNow(timeZone: string | undefined): Promise<string> {
   const day = todayKeyFor(Date.now(), timeZone);
   const fresh = await fetchFresh();
@@ -164,10 +150,8 @@ export async function refreshBackdropNow(timeZone: string | undefined): Promise<
   return fresh;
 }
 
-// Returns the current backdrop as a JPEG data URL, or null when no image is
-// cached (the app then falls back to the flat rose background). Never throws.
-// The second element forces a fresh random Unsplash pull (used by the manual
-// refresh button); it resolves to the new data URL or null on failure.
+// Current backdrop as a JPEG data URL, or null when nothing is cached. The second
+// element force-pulls a fresh random image (hardware button); null on failure.
 export function useDailyBackdrop(timeZone: string | undefined): [string | null, () => Promise<string | null>] {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
 
@@ -202,8 +186,7 @@ export function useDailyBackdrop(timeZone: string | undefined): [string | null, 
         writeCache(day, fresh);
         apply(fresh);
       } catch {
-        // keep the previous image even if stale; none -> rose fallback.
-        apply(cached.dataUrl);
+        apply(cached.dataUrl); // keep previous even if stale; none -> fallback
       }
     };
 

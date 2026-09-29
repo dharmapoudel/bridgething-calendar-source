@@ -1,6 +1,4 @@
-// Pure date and event math for the calendar app.
-// Ported from the omarchy-calendar Model.js. Everything here is UI-free so it
-// can be unit tested under node; the React layer owns rendering.
+// Pure date and event math. UI-free so it can be unit tested under node.
 
 export interface CalEvent {
   id: string;
@@ -17,7 +15,6 @@ export interface CalEvent {
   eventUrl?: string;
   eventType?: string;
   responseStatus?: string;
-  /** Plain-text notes, truncated for display. */
   description?: string;
 }
 
@@ -59,14 +56,8 @@ export function pad2(value: number): string {
   return (n < 10 ? '0' : '') + n;
 }
 
-// ---------------------------------------------------------------------------
-// Timezone-aware wall-clock fields.
-//
-// The Car Thing does not know the user's timezone (no battery-backed clock;
-// the phone is the time authority), so every wall-clock read goes through
-// the IANA zone the daemon reports. When timeZone is undefined we fall back
-// to the runtime's local zone (simulator / dev).
-// ---------------------------------------------------------------------------
+// Timezone-aware wall-clock fields. The device has no battery-backed clock, so
+// reads go through the daemon's IANA zone; undefined falls back to local zone.
 
 export interface ZonedParts {
   year: number;
@@ -136,7 +127,6 @@ export function todayKeyFor(ms: number, timeZone: string | undefined): string {
   return dateKey(p.year, p.month - 1, p.day);
 }
 
-/** Offset to add to a UTC instant to get wall time in the zone, in ms. */
 export function zoneOffsetMs(ms: number, timeZone: string): number {
   const p = zonedParts(ms, timeZone);
   const wallAsUtc = Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
@@ -271,9 +261,6 @@ export function stepMonth(year: number, month: number, delta: number): { year: n
   return { year: target.getFullYear(), month: target.getMonth() };
 }
 
-// ---- Event helpers. The UI renders whatever the ICS layer produced; none of
-//      this knows where the events came from.
-
 export function indexEventsByDate(events: CalEvent[]): Record<string, CalEvent[]> {
   const index: Record<string, CalEvent[]> = {};
   for (const event of events || []) {
@@ -295,9 +282,7 @@ export interface CalendarInfo {
   color: string;
 }
 
-// The calendars present in a synced document, in display order. Derived from
-// the events themselves so the app can only ever offer calendars that
-// actually have events.
+// Calendars present in the events, in display order.
 export function calendarsInDocument(events: CalEvent[]): CalendarInfo[] {
   const byId: Record<string, boolean> = {};
   const ordered: CalendarInfo[] = [];
@@ -368,9 +353,7 @@ export function eventUrlFor(event: CalEvent): string {
   return event ? safeUrl(event.eventUrl) : '';
 }
 
-// How long before the start, and after the end, a meeting still counts as
-// joinable. A Join button on next Tuesday's meeting is noise that dilutes the
-// one that matters, so the affordance only appears around the actual time.
+// Window around a meeting when the Join affordance appears.
 const JOIN_LEAD_MINUTES = 15;
 const JOIN_GRACE_MINUTES = 15;
 
@@ -415,11 +398,8 @@ export function visibleEvents(
   return visible;
 }
 
-// ---- The next thing coming up.
-
-// All-day events are deliberately excluded. They start at midnight, so a
-// countdown to one either reads as hours in the past or as tomorrow, and
-// neither tells you anything you wanted to know.
+// All-day events are excluded: they start at midnight, so a countdown reads as
+// hours in the past or as tomorrow.
 export function nextEvent(events: CalEvent[], nowMs: number): CalEvent | null {
   let best: CalEvent | null = null;
   let bestMs: number | null = null;
@@ -467,7 +447,6 @@ export function truncateTitle(title: string | null | undefined, limit?: number):
   return text.slice(0, max - 1).replace(/\s+$/, '') + '…';
 }
 
-// How long until an event starts, or null when it cannot be read.
 export function millisUntil(event: CalEvent | null, nowMs: number): number | null {
   if (!event) return null;
   const startMs = Date.parse(event.start);

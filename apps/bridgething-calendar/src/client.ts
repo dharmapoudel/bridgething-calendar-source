@@ -1,5 +1,4 @@
-// Bridgething client wiring: daemon connection, config surface reads, and
-// proxied network fetch. The daemon URL logic mirrors @bridgething/webapp-shared.
+// Bridgething client: daemon connection, config reads, proxied net fetch.
 
 import { BridgethingClient, type NetFetchReply } from '@bridgething/client';
 
@@ -92,7 +91,6 @@ export interface DeviceTime {
   timeZone: string | undefined;
 }
 
-/** Full time info from the daemon: instant + the phone's timezone. */
 export async function deviceTime(): Promise<DeviceTime> {
   try {
     const t = await getClient().time.get({ timeoutMs: 8000 });

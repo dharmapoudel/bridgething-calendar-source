@@ -32,9 +32,7 @@ interface AppConfig {
   countdownMinutes: number;
 }
 
-// Fallback when the stored ics_feeds value is empty (e.g. users who installed
-// before defaults existed): the daemon only seeds manifest defaults on first
-// install, so upgrades would otherwise get zero feeds.
+// Fallback for upgraders: the daemon only seeds manifest defaults on first install.
 const DEFAULT_FEEDS: string[] = [
   'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics',
   'https://www.calendarlabs.com/ical-calendar/ics/76/US_Holidays.ics',
@@ -45,9 +43,7 @@ const DEFAULT_FEEDS: string[] = [
 ];
 
 const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
-// localStorage key for the on-device theme toggle (0.2.24). Stores the
-// DISPLAYED theme directly, bypassing the 0.2.18 flip. The webapp cannot
-// write daemon config (no config.set surface), so the toggle persists here.
+// On-device theme toggle persists here (webapp has no daemon config.set); stores the DISPLAYED theme.
 const THEME_OVERRIDE_KEY = 'themeOverride';
 // Horizontal nudge (px) aligning the month name's left edge exactly with the
 // left edge of the "S" Sunday header glyph. Positive shifts the label right.
@@ -140,7 +136,6 @@ function useIsPortrait(): boolean {
   return portrait;
 }
 
-// "Friday 9/18" style header for the focused/selected day.
 function dayHeaderLabel(key: string): string {
   const d = dateFromKey(key, new Date());
   const wd = d.toLocaleDateString(undefined, { weekday: 'long' });
@@ -159,9 +154,7 @@ export default function App() {
   const [selectedKey, setSelectedKey] = useState(() => keyForDate(new Date()));
   const [detail, setDetail] = useState<CalEvent | null>(null);
   const [sheetOpen, setSheetOpen] = useState(false);
-  // Arrival pulse on today's cell after goToday (0.2.26).
   const [pulseToday, setPulseToday] = useState(false);
-  // Swipeable next-event line: index into the upcoming list + swipe direction.
   const [lineIdx, setLineIdx] = useState(0);
   const [lineDir, setLineDir] = useState<'next' | 'prev'>('next');
   const configRef = useRef<AppConfig | null>(null);
@@ -172,16 +165,12 @@ export default function App() {
   const navDirRef = useRef<{ dir: 'next' | 'prev' | 'fade' }>({ dir: 'fade' });
   const swipeStart = useRef<{ x: number; y: number } | null>(null);
   const lineSwipeStart = useRef<{ x: number } | null>(null);
-  // Knob long-press plumbing (0.2.26): Enter/Space held 600ms goes to today.
   const pressTimer = useRef<number | null>(null);
   const longPressFired = useRef(false);
   const isPortrait = useIsPortrait();
-  // Daily Unsplash landscape backdrop (blurred, cached per local day).
-  // Second element force-pulls a fresh random image (manual refresh button).
   const [backdropUrl, refreshBackdrop] = useDailyBackdrop(timeZone);
 
-  // FLIP selection-circle plumbing: measure the focused day cell and glide
-  // one absolutely-positioned circle to it (transform-only, spring easing).
+  // FLIP selection circle: glides one absolutely-positioned circle to the focused cell.
   const gridWrapRef = useRef<HTMLDivElement | null>(null);
   const cellRefs = useRef(new Map<string, HTMLButtonElement>());
   const [circle, setCircle] = useState<{ x: number; y: number; s: number } | null>(null);
@@ -202,9 +191,7 @@ export default function App() {
     setConfig(parseConfig({ feeds, refresh, theme, weekStart, countdown }));
   }, []);
 
-  // Theme toggle (0.2.24): flips the DISPLAYED theme. The webapp has no
-  // config.set surface, so the choice persists in localStorage (see
-  // THEME_OVERRIDE_KEY) and applies instantly via dataset.theme.
+  // Flips the DISPLAYED theme; persists in localStorage (no daemon config.set).
   const toggleTheme = useCallback(() => {
     setConfig(prev => {
       if (!prev) return prev;
@@ -219,7 +206,6 @@ export default function App() {
     });
   }, []);
 
-  // Background refresh (0.2.24): force-pull a random Unsplash landscape.
   const [refreshingBg, setRefreshingBg] = useState(false);
   const refreshBackground = useCallback(async () => {
     if (refreshingBg) return;
@@ -258,11 +244,8 @@ export default function App() {
     }
   }, []);
 
-  // boot: config, device clock, live config updates.
-  // The phone is the time authority (the device has no battery-backed
-  // clock): both the instant and the IANA zone come from the daemon, so the
-  // clock renders in the user's timezone instead of the device's (UTC).
-  // The offset is re-synced every minute so drift never accumulates.
+  // Boot: config, device clock, live config updates. The phone is the time
+  // authority (no battery-backed clock on device); offset re-synced every minute.
   useEffect(() => {
     loadConfig();
     let alive = true;
@@ -293,27 +276,18 @@ export default function App() {
     };
   }, [loadConfig]);
 
-  // Apply the theme (dark by default) to the document root.
   useEffect(() => {
     document.documentElement.dataset.theme = config?.theme ?? 'dark';
   }, [config?.theme]);
 
-  // Detect the background brightness per region and flip text to dark
-  // where the background is light, so text stays readable. The photo is
-  // often brighter in one region (e.g. sky on the left) and darker in
-  // another (e.g. ground under the calendar), so a single global average
-  // can't fix both: the LEFT region (date header, clock, next-event line,
-  // x < 35%) and the RIGHT region (month calendar grid, x >= 35%) are
-  // sampled independently into data-bg-left / data-bg-right. When the
-  // photo is absent/fails, fall back to the theme's own background color.
-  // Only sets attributes on documentElement (CSS swaps text colors) — no
-  // layout or size changes.
+  // Per-region background brightness: LEFT (date/clock, x<35%) and RIGHT (calendar,
+  // x>=35%) sampled independently; a global average can't handle photos brighter in
+  // one region. Falls back to theme bg when the photo is absent. Attributes only.
   useEffect(() => {
     const root = document.documentElement;
     const theme = config?.theme ?? 'dark';
     const applyThemeFallback = () => {
-      // No photo: judge by the theme's solid background instead of doing
-      // nothing, so ALL text still gets background-appropriate contrast.
+      // No photo: judge by the theme's solid background so text stays readable.
       if (theme === 'light') {
         root.dataset.bgLeft = 'light';
         root.dataset.bgRight = 'light';
@@ -341,9 +315,7 @@ export default function App() {
         if (!ctx) return;
         ctx.drawImage(img, 0, 0, size, size);
         const data = ctx.getImageData(0, 0, size, size).data;
-        // Left region: x < 35% (date header, clock, next-event line).
-        // Right region: x >= 35% (month calendar grid). Full height both.
-        const splitX = Math.floor(size * 0.35);
+        const splitX = Math.floor(size * 0.35); // x<35%: date/clock; x>=35%: calendar grid
         let leftSum = 0;
         let leftCount = 0;
         let rightSum = 0;
@@ -368,17 +340,14 @@ export default function App() {
         else root.removeAttribute('data-bg-left');
         if (rightLight) root.dataset.bgRight = 'light';
         else root.removeAttribute('data-bg-right');
-        // Legacy global: light if either region is light, so any text
-        // outside the two panels still gets a sane default.
+        // Global fallback for text outside both panels.
         if (leftLight || rightLight) root.dataset.bg = 'light';
         else root.removeAttribute('data-bg');
       } catch {
-        // Photo unreadable: fall back to the theme's background.
         if (!cancelled) applyThemeFallback();
       }
     };
     img.onerror = () => {
-      // Photo failed to load: fall back to the theme's background.
       if (!cancelled) applyThemeFallback();
     };
     img.src = backdropUrl;
@@ -397,7 +366,6 @@ export default function App() {
     }
   }, [timeZone, config, loadFeedsNow]);
 
-  // fetch when feeds become known; poll on the refresh interval
   useEffect(() => {
     if (!config || config.feeds.length === 0) return;
     loadFeedsNow(config);
@@ -414,7 +382,6 @@ export default function App() {
   );
   const index = useMemo(() => indexEventsByDate(visible), [visible]);
   const todayKey = useMemo(() => todayKeyFor(now, timeZone), [now, timeZone]);
-  // The reference starts weeks on Sunday with blank leading cells.
   const grid = useMemo(
     () => monthGrid(viewYear, viewMonth, config?.weekStart ?? 1, todayKey, index),
     [viewYear, viewMonth, config?.weekStart, todayKey, index],
@@ -427,9 +394,7 @@ export default function App() {
     });
   }, [index, selectedKey]);
 
-  // Upcoming events feed the swipeable one-line next-event carousel.
-  // All-day events are included: holiday/sports feeds are all-day-only,
-  // so excluding them left the line stuck on "Nothing coming up".
+  // All-day events included: holiday/sports feeds are all-day-only.
   const upcoming = useMemo(() => {
     const out: CalEvent[] = [];
     for (const ev of visible) {
@@ -459,22 +424,17 @@ export default function App() {
     const tYear = p.year;
     const tMonth = p.month - 1;
     if (tYear !== viewYear || tMonth !== viewMonth) {
-      // Different month: slide the grid toward today (0.2.26). Future
-      // months slide in from the right (content moves left), past months
-      // from the left — a pleasant page-swipe instead of an instant cut.
+      // Slide toward today: future months from the right, past from the left.
       navDirRef.current = {
         dir: tYear > viewYear || (tYear === viewYear && tMonth > viewMonth) ? 'next' : 'prev',
       };
     } else {
-      // Same month: the grid doesn't re-mount, so no month animation is
-      // needed — the FLIP selection circle glides to today's cell via its
-      // CSS transition, plus a subtle arrival pulse (see pulseToday).
+      // Same month: grid doesn't re-mount; the FLIP circle glides instead.
       navDirRef.current = { dir: 'fade' };
     }
     setViewYear(tYear);
     setViewMonth(tMonth);
     setSelectedKey(dateKey(tYear, tMonth, p.day));
-    // Arrival pulse on today's cell (both cases): re-trigger by toggling.
     setPulseToday(false);
     requestAnimationFrame(() => {
       requestAnimationFrame(() => setPulseToday(true));
@@ -482,8 +442,7 @@ export default function App() {
     window.setTimeout(() => setPulseToday(false), 550);
   }, [now, viewYear, viewMonth]);
 
-  // Knob rotate moves the day focus; crossing a month edge steps the month
-  // (with the slide animation). Left/right = ±1 day, up/down = ±1 week.
+  // Knob rotate: left/right ±1 day, up/down ±1 week; crossing a month edge steps the month.
   const moveFocus = useCallback((deltaDays: number) => {
     interactedRef.current = true;
     const d = dateFromKey(selectedKey, new Date());
@@ -498,7 +457,6 @@ export default function App() {
     setSelectedKey(keyForDate(d));
   }, [selectedKey, viewYear, viewMonth]);
 
-  // Knob press on the focused day: open its events (the day sheet).
   const pressFocused = useCallback(() => {
     interactedRef.current = true;
     if (detail) {
@@ -512,16 +470,9 @@ export default function App() {
     setSheetOpen(true);
   }, [detail, sheetOpen, selectedEvents]);
 
-  // Knob (rotary) input arrives as arrow keys / Enter on the Car Thing.
-  // Context: detail modal open -> scroll it; day sheet open -> scroll it
-  // or open the first event; else move the day focus. Tap/click keeps
-  // working through the onClick handlers.
-  //
-  // Knob press (Enter/Space) is split across keydown/keyup for long-press
-  // detection (0.2.26): keydown starts a 600ms timer; keyup performs the
-  // short-press. If the timer fires first it goes to today and the keyup
-  // is suppressed. Short-press actions therefore live in onKeyUp, never
-  // in onKey.
+  // Knob input arrives as arrow keys / Enter. Enter/Space is split across
+  // keydown/keyup for long-press detection: keydown starts a 600ms timer,
+  // keyup performs the short-press (or suppresses it if the timer fired).
   useEffect(() => {
     const onWheel = (e: WheelEvent) => {
       if (detail) return;
@@ -546,10 +497,7 @@ export default function App() {
         goToday();
         return;
       }
-      // Car Thing hardware preset buttons (0.2.25): preset 1 / F1 toggles
-      // the theme, preset 2 / F2 force-refreshes the Unsplash background.
-      // Placed before the dialog branches so they work globally, even when
-      // the day sheet or event detail modal is open.
+      // Hardware presets: 1/F1 toggles theme, 2/F2 refreshes background. Global.
       if (e.key === '1' || e.key === 'F1') {
         toggleTheme();
         return;
@@ -565,7 +513,6 @@ export default function App() {
         pressTimer.current = window.setTimeout(() => {
           pressTimer.current = null;
           longPressFired.current = true;
-          // Long-press: close any open dialog and return to today.
           setDetail(null);
           setSheetOpen(false);
           goToday();
@@ -609,11 +556,9 @@ export default function App() {
         pressTimer.current = null;
       }
       if (longPressFired.current) {
-        // Long-press already navigated to today; suppress the short-press.
         longPressFired.current = false;
         return;
       }
-      // Short-press: the Enter/Space action the keydown handler used to do.
       if (detail) {
         setDetail(null);
       } else if (sheetOpen) {
@@ -637,8 +582,7 @@ export default function App() {
     };
   }, [goMonth, goToday, moveFocus, pressFocused, detail, sheetOpen, selectedEvents, toggleTheme, refreshBackground]);
 
-  // Glide the selection circle to the focused cell after every render that
-  // could have moved it. Runs pre-paint, so the first frame is already right.
+  // Glide the selection circle to the focused cell pre-paint.
   useLayoutEffect(() => {
     const wrap = gridWrapRef.current;
     const cell = cellRefs.current.get(selectedKey);
@@ -668,7 +612,6 @@ export default function App() {
     ...(timeZone ? { timeZone } : {}),
   });
   const clockMain = clockRaw.replace(/^[AaPp][Mm]\s*|\s*[AaPp][Mm]$/g, '').trim();
-  // re-mount the clock on minute change so the digits fade in
   const minuteKey = clockMain;
 
   if (!config) {
@@ -685,14 +628,12 @@ export default function App() {
     setSheetOpen(true);
   };
 
-  // Month changes always slide sideways: left/right swipes, knob, wheel.
   const navAnimClass = (() => {
     const { dir } = navDirRef.current;
     if (dir === 'fade') return 'month-in-fade';
     return dir === 'next' ? 'month-in-next' : 'month-in-prev';
   })();
 
-  // Swipe left/right on the month grid steps months (swipe left = next month).
   // Vertical swipes are intentionally ignored.
   const onTouchStart = (e: React.TouchEvent) => {
     swipeStart.current = { x: e.touches[0].clientX, y: e.touches[0].clientY };
@@ -705,7 +646,6 @@ export default function App() {
     if (Math.abs(dx) > 48 && Math.abs(dx) > Math.abs(dy)) goMonth(dx < 0 ? 1 : -1);
   };
 
-  // Swipe left/right on the next-event line cycles through upcoming events.
   const onLineTouchStart = (e: React.TouchEvent) => {
     lineSwipeStart.current = { x: e.touches[0].clientX };
   };
@@ -774,9 +714,6 @@ export default function App() {
     <div
       className={`relative flex h-full w-full ${isPortrait ? 'flex-col' : 'flex-row'} text-off-white`}
     >
-      {/* Daily Bing backdrop (blurred photo of the day) + warm dark scrim.
-          Both render only when an image is cached; otherwise the body's flat
-          rose shows through as the fallback. */}
       <div aria-hidden className="pointer-events-none fixed inset-0" style={{ zIndex: 0 }}>
         {backdropUrl && (
           <div
@@ -793,15 +730,12 @@ export default function App() {
           <div className="absolute inset-0" style={{ background: 'rgba(24,10,10,0.38)' }} />
         )}
       </div>
-      {/* clock panel: left in landscape, top in portrait */}
       <section
         data-panel="left"
         className={`relative z-[1] flex shrink-0 flex-col ${
           isPortrait ? 'h-[40%] w-full px-6 pt-5 pb-4' : 'w-[40%] px-7 pt-10 pb-6'
         }`}
       >
-        {/* date header: same size as September (20px); identical boxes mean
-            top-aligned IS optically aligned — 0.2.9's +3.6px nudge removed. */}
         <div className="font-body text-[1.25rem] font-medium text-off-white">
           {dayHeaderLabel(selectedKey)}
         </div>
@@ -811,30 +745,19 @@ export default function App() {
           style={{
             fontFamily: '"Source Serif Pro", Georgia, "Times New Roman", serif',
             fontWeight: 500,
-            // font-size = 2.5 x DOW row height. DOW = date size (1.375rem = 22px),
-            // so H_dow = 22*1.5 + pb-2(8) = 41 -> clock = 102.5px. DOW classes are
-            // orientation-independent, so one value serves both. leading-none
-            // keeps the em box exact.
+            // 2.5x DOW row height (22px*1.5+8=41 -> 102.5px).
             fontSize: 102.5,
             letterSpacing: '-0.02em',
-            // landscape: clockTop == dowTop (standing). mondayBox == septBox == 30
-            // now, so mt = septPadBottom = 12px. portrait keeps mt-2 (className).
             marginTop: isPortrait ? undefined : 12,
           }}
         >
           {clockMain}
         </div>
-        {/* one-line next-event carousel: swipe to see more */}
         <div
           className={`w-full select-none ${isPortrait ? 'mt-auto' : ''}`}
           style={{
             touchAction: 'pan-y',
-            // landscape: event line's vertical center == last (5th) date row's
-            // center. gridTop = dowTop(82) + H_dow(41) = 123 (no grid top pad in
-            // code); rowH = (gridAvailH(317) - 4*4)/5 = 60.2;
-            // lastRowCenter = 123 + 4.5*60.2 + 16 = 409.9;
-            // eventMt = 409.9 - clockBottom(184.5) - E/2(12) = 213.4px.
-            // portrait: mt-auto bottom-anchored, untouched.
+            // Aligns event line with the last date row's center (landscape).
             marginTop: isPortrait ? undefined : 213.4,
           }}
           onTouchStart={onLineTouchStart}
@@ -864,7 +787,6 @@ export default function App() {
         </div>
       </section>
 
-      {/* month grid */}
       <main
         data-panel="right"
         className={`relative z-[1] flex min-h-0 flex-col ${
@@ -947,8 +869,7 @@ export default function App() {
         </div>
       </main>
 
-      {/* day sheet: bottom sheet in portrait, centered card in landscape.
-          Forced dark via data-theme="dark" (see index.css) regardless of app theme. */}
+      {/* Forced dark via data-theme="dark" regardless of app theme. */}
       {isPortrait ? (
         <aside
           data-theme="dark"
@@ -977,7 +898,6 @@ export default function App() {
         )
       )}
 
-      {/* event detail modal */}
       {detail && (
         <div
           className="modal-backdrop-in absolute inset-0 z-10 grid place-items-center bg-black/60 p-8"
@@ -1060,7 +980,6 @@ function EventRow({
   );
 }
 
-// Renders plain text with any http(s) URLs turned into tappable links.
 function LinkifiedText({ text }: { text: string }) {
   const parts = linkify(text);
   return (

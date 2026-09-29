@@ -1,11 +1,6 @@
-// iCalendar (.ics) parsing, recurrence expansion, and normalization into the
-// CalEvent contract the UI renders. Hand-rolled against the subset calendar
-// feeds actually emit (Google, Apple, Outlook): VEVENT with DTSTART/DTEND or
-// DURATION, RRULE (DAILY/WEEKLY/MONTHLY/YEARLY), EXDATE, RECURRENCE-ID,
-// STATUS, TRANSP, and TZID datetimes resolved through Intl.
-//
-// The fetch itself is injected so this stays testable without the bridgething
-// client: the app wires it to client.net.fetch.
+// iCalendar (.ics) parsing, recurrence expansion, and normalization to CalEvent.
+// Hand-rolled for the subset feeds emit (Google, Apple, Outlook). Fetch is injected
+// for testability.
 
 import { dateKey, pad2, safeUrl, zonedParts, zonedWallToMs, zoneOffsetMs } from './model';
 import type { CalEvent } from './model';
@@ -16,7 +11,6 @@ export interface FeedSource {
   color: string;
 }
 
-// Google-style calendar colors, one per feed.
 export const FEED_COLORS = [
   '#89b4fa', // blue
   '#a6e3a1', // green
@@ -136,7 +130,6 @@ function parseDuration(value: string): number | null {
   return sign * ms;
 }
 
-// Offset of an IANA zone at a UTC instant, in minutes, via Intl.
 function tzOffsetMinutes(tzid: string, utcMs: number): number | null {
   try {
     const dtf = new Intl.DateTimeFormat('en-US', {
@@ -201,8 +194,6 @@ function compareWall(a: WallDateTime, b: WallDateTime): number {
   const kb = wallKey(b);
   return ka < kb ? -1 : ka > kb ? 1 : 0;
 }
-
-// ---- RRULE expansion, computed in wall-clock space per RFC 5545.
 
 interface RRule {
   freq: 'DAILY' | 'WEEKLY' | 'MONTHLY' | 'YEARLY';
@@ -404,8 +395,6 @@ function expandRRule(start: WallDateTime, rule: RRule, onOccurrence: (w: WallDat
   }
 }
 
-// ---- VEVENT parsing
-
 function parseVEvent(lines: string[]): RawEvent | null {
   let uid = '';
   let start: WallDateTime | null = null;
@@ -501,9 +490,7 @@ export function toLocalIso(ms: number): string {
   );
 }
 
-// ISO-8601 with the numeric offset of the phone's timezone at that instant,
-// so the stored string round-trips to the exact instant and renders in the
-// user's wall time. Falls back to device-local when the zone is unknown.
+// ISO-8601 with the phone's timezone offset at that instant; falls back to device-local.
 export function toZonedIso(ms: number, timeZone: string | undefined): string {
   if (!timeZone) return toLocalIso(ms);
   const p = zonedParts(ms, timeZone);
@@ -549,7 +536,6 @@ interface Occurrence {
   wallYear: number;
   wallMonth: number;
   wallDay: number;
-  /** Days spanned, for all-day events. */
   durationDays: number;
   raw: RawEvent;
   overridden: boolean;
@@ -628,10 +614,8 @@ function expandEvent(
   return out;
 }
 
-// One CalEvent per day spanned, so dots, agenda, and counts all work without
-// special-casing multi-day events downstream. All-day events are pinned to
-// their wall-clock dates; timed events split on the phone-timezone's day
-// boundaries.
+// One CalEvent per day spanned. All-day events pin to wall-clock dates; timed events
+// split on the phone-timezone's day boundaries.
 function occurrencesToEvents(occ: Occurrence, feed: FeedSource, timeZone: string | undefined): CalEvent[] {
   const raw = occ.raw;
   const events: CalEvent[] = [];
@@ -732,9 +716,7 @@ export interface ParseResult {
   feedName: string;
 }
 
-// Full pipeline for one feed: parse, expand recurrences inside the window,
-// normalize. Window bounds are absolute ms. timeZone is the phone's IANA
-// zone for wall-clock rendering; undefined keeps device-local behavior.
+// Full pipeline for one feed: parse, expand recurrences, normalize. Window bounds are absolute ms.
 export function expandFeedEvents(
   text: string,
   feed: FeedSource,

@@ -8,9 +8,7 @@
   src: url("./fonts/Inter-Variable.ttf") format("truetype-variations");
 }
 
-/* Times New Roman stand-in for the big clock (metric-compatible). The Car
-   Thing ships no MS fonts, so this is bundled to guarantee the Times look.
-   Latin subset only: the clock renders digits and ":". */
+/* Times New Roman stand-in for the big clock (device ships no MS fonts). */
 @font-face {
   font-family: "Tinos";
   font-style: normal;
@@ -22,9 +20,7 @@
     U+FEFF, U+FFFD;
 }
 
-/* Source Serif Pro Bold for the big clock. The Car Thing ships no Adobe
-   fonts, so this is bundled to guarantee the look.
-   Latin subset only: the clock renders digits and ":". */
+/* Source Serif Pro for the big clock (device ships no Adobe fonts). */
 @font-face {
   font-family: "Source Serif Pro";
   font-style: normal;
@@ -36,9 +32,7 @@
     U+FEFF, U+FFFD;
 }
 
-/* script fallbacks so event titles in Devanagari (Hindi/Nepali) and Arabic
-   render instead of tofu blocks; unicode-range keeps them out of the way of
-   latin text */
+/* Devanagari/Arabic fallbacks so event titles don't render as tofu. */
 @font-face {
   font-family: "Noto Sans Devanagari";
   font-style: normal;
@@ -58,7 +52,6 @@
 }
 
 @theme {
-  /* Warm dark (default): near-black warm background, warm white text */
   --color-off-white: #fbf4f2;
   --color-bg: #161211;
   --color-screen: #161211;
@@ -77,11 +70,9 @@
   --color-soft: #fbf4f2;
   --color-near: #fbf4f2;
 
-  /* day-focus selection circle: soft rose accent with dark ink */
   --color-select: #fbf4f2;
   --color-select-ink: #33272b;
 
-  /* sheet / modal surface: a deeper rose than the flat background */
   --color-panel: #221a16;
 
   --color-accent-soft: color-mix(in srgb, var(--color-accent) 14%, transparent);
@@ -113,8 +104,7 @@
   --radius-none: 0;
 }
 
-/* Light theme: warm paper. The data-theme attribute is set on
-   documentElement from the theme setting (dark by default). */
+/* Light theme (data-theme set on documentElement, dark by default). */
 [data-theme="light"] {
   color-scheme: light;
 
@@ -142,11 +132,7 @@
   --color-panel: #efe3d8;
 }
 
-/* Background brightness detection: when the Bing photo backdrop is light,
-   flip text to dark so it stays readable. App.tsx sets data-bg="light" on
-   documentElement after sampling the photo's luminance. Only text colors
-   change — background, layout, and sizes are untouched. Placed after
-   [data-theme="light"] so it wins on equal specificity. */
+/* Photo backdrop is light -> flip text to dark. Only text colors change. */
 [data-bg="light"] {
   --color-off-white: #2b1d21;
   --color-fg: #2b1d21;
@@ -156,13 +142,7 @@
   --color-near: #2b1d21;
 }
 
-/* Regional background brightness detection: the photo is often brighter in
-   one region (e.g. sky behind the date/clock) and darker in another (e.g.
-   ground behind the calendar grid), so each panel flips independently.
-   App.tsx sets data-bg-left / data-bg-right on documentElement after
-   sampling each region's luminance. Scoped to the panel containers via
-   data-panel so the rules only affect their own region — a bright left
-   side no longer washes out the calendar on the right, or vice versa. */
+/* Regional brightness: left/right panels flip independently via data-panel. */
 [data-bg-left="light"] [data-panel="left"] {
   --color-off-white: #2b1d21;
   --color-fg: #2b1d21;
@@ -180,11 +160,7 @@
   --color-near: #2b1d21;
 }
 
-/* Subtle text-shadow safety net: keeps text legible even where the regional
-   analysis is slightly off. The shadow color flips with the detected
-   brightness of each panel. Kept faint enough to be invisible when contrast
-   is already good. text-shadow inherits, so setting it on the panel covers
-   all text inside. */
+/* Text-shadow safety net for marginal contrast; color flips per panel. */
 [data-panel="left"],
 [data-panel="right"] {
   text-shadow: 0 1px 8px rgb(0 0 0 / 0.35);
@@ -194,12 +170,7 @@
   text-shadow: 0 1px 8px rgb(255 255 255 / 0.35);
 }
 
-/* Force-dark for dialog containers (day sheet / modals): re-declares the
-   dark theme custom properties so dialogs always render dark regardless of
-   the app theme or background-brightness detection. Applied via
-   data-theme="dark" on the dialog container elements in App.tsx. Matches the
-   dialog element itself, so these values override anything inherited from a
-   light-themed or data-bg="light" documentElement. Placed last to win. */
+/* Force-dark dialogs: re-declares dark vars so dialogs stay dark in any theme. */
 [data-theme="dark"] {
   color-scheme: dark;
 
@@ -323,9 +294,7 @@
   animation: month-in-fade 200ms ease-out;
 }
 
-/* goToday arrival pulse (0.2.26): a soft glow ring blooms on today's cell
-   once the selection circle arrives. Box-shadow only — never touches the
-   inline transform that positions the circle. */
+/* goToday arrival pulse: glow ring on today's cell (box-shadow only). */
 @keyframes today-arrive {
   0% {
     box-shadow: 0 0 0 0 var(--color-accent);
@@ -356,12 +325,11 @@
   will-change: transform, opacity;
 }
 
-/* Daily Bing backdrop: fades in on first load and on the day-rollover swap. */
+/* Backdrop: fades in on first load and day-rollover swap. */
 .backdrop-swap {
   animation: backdrop-in 600ms ease-out;
 }
 
-/* Day-focus selection circle: glides between cells with spring easing. */
 .select-circle {
   transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform;
@@ -383,10 +351,7 @@
   }
 }
 
-/* 0.2.29: no outline boxes anywhere. Browser default focus outlines (e.g. the
-   white rectangle around the next-event button) are removed. Knob focus still
-   changes state internally; it just no longer draws a visible box. The
-   select-circle and today-arrive glow are unaffected (box-shadow, not outline). */
+/* No outline boxes anywhere (knob focus still works, just invisible). */
 *, *::before, *::after {
   outline: none !important;
   -webkit-tap-highlight-color: transparent;
