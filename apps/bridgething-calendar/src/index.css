@@ -382,3 +382,12 @@
     transition: none;
   }
 }
+
+/* 0.2.29: no outline boxes anywhere. Browser default focus outlines (e.g. the
+   white rectangle around the next-event button) are removed. Knob focus still
+   changes state internally; it just no longer draws a visible box. The
+   select-circle and today-arrive glow are unaffected (box-shadow, not outline). */
+*, *::before, *::after {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
+}

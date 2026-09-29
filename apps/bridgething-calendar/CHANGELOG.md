@@ -1,3 +1,7 @@
+## 0.2.29
+
+Removed focus outline boxes from all elements: a global `outline: none` rule (plus transparent `-webkit-tap-highlight-color`) in index.css eliminates the browser-default white rectangles (e.g. around the next-event button) that appeared during knob navigation. Focus state still changes internally for knob control; only the visible box is gone. The today select-circle and the today-arrive glow pulse are untouched (they use box-shadow, not outline).
+
 ## 0.2.28
 
 Changed ics_feeds delimiter from newlines to `;` (semicolon): the feed list is now stored as `url1;url2;url3` which displays cleanly in the iOS companion app's single-line input box. settings.html and App.tsx both normalize legacy formats (actual newlines and literal backslash-n sequences are converted to `;`) before splitting, so existing saved values keep working. The webview save path joins with `;`, and the manifest default uses `;` separators.
