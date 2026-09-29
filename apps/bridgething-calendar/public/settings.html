@@ -199,13 +199,13 @@
 
   // ---------- demo mode (?demo=1): stub host for local testing ----------
   var DEMO_FIELDS = [
-    { type: 'string', data: { key: 'ics_feeds', label: 'Calendar feeds', default: 'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics\nhttps://www.calendarlabs.com/ical-calendar/ics/76/US_Holidays.ics\nhttps://www.calendarlabs.com/ical-calendar/ics/76/Formula_1.ics\nhttps://www.fixturedownload.com/download/epl-2025-26-GMT.ics\nhttps://www.calendarlabs.com/ical-calendar/ics/75/NFL.ics\nhttps://calendar.google.com/calendar/ical/ht3jlfaac5lfd6263ulfh4tql8%40group.calendar.google.com/public/basic.ics' } },
+    { type: 'string', data: { key: 'ics_feeds', label: 'Calendar feeds', default: 'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics\nhttps://www.calendarlabs.com/ical-calendar/ics/76/US_Holidays.ics\nhttps://www.calendarlabs.com/ical-calendar/ics/76/Formula_1.ics\nhttps://www.calendarlabs.com/ical-calendar/ics/75/NFL.ics\nhttps://calendar.google.com/calendar/ical/ht3jlfaac5lfd6263ulfh4tql8%40group.calendar.google.com/public/basic.ics' } },
     { type: 'enum', data: { key: 'week_start', label: 'Week starts on', choices: ['sunday', 'monday'], default: 'monday' } },
     { type: 'enum', data: { key: 'theme', label: 'Theme', choices: ['dark', 'light'], default: 'dark' } },
     { type: 'number', data: { key: 'countdown_minutes', label: 'Announce events starting within (minutes)', min: 5, max: 180, step: 5, default: 30 } },
     { type: 'number', data: { key: 'refresh_minutes', label: 'Refresh feeds every (minutes)', min: 5, max: 120, step: 5, default: 15 } }
   ];
-  var demoValues = { ics_feeds: 'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics;https://www.calendarlabs.com/ical-calendar/ics/76/US_Holidays.ics;https://www.calendarlabs.com/ical-calendar/ics/76/Formula_1.ics;https://www.fixturedownload.com/download/epl-2025-26-GMT.ics;https://www.calendarlabs.com/ical-calendar/ics/75/NFL.ics;https://calendar.google.com/calendar/ical/ht3jlfaac5lfd6263ulfh4tql8%40group.calendar.google.com/public/basic.ics' };
+  var demoValues = { ics_feeds: 'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics;https://www.calendarlabs.com/ical-calendar/ics/76/US_Holidays.ics;https://www.calendarlabs.com/ical-calendar/ics/76/Formula_1.ics;https://www.calendarlabs.com/ical-calendar/ics/75/NFL.ics;https://calendar.google.com/calendar/ical/ht3jlfaac5lfd6263ulfh4tql8%40group.calendar.google.com/public/basic.ics' };
   if (new URLSearchParams(location.search).get('demo') === '1') {
     window.__demoCalls = [];
     window.ReactNativeWebView = {

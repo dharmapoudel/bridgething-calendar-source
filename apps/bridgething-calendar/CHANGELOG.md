@@ -1,3 +1,7 @@
+## 0.2.31
+
+Removed the dead EPL feed (`https://www.fixturedownload.com/download/epl-2025-26-GMT.ics`, was 404ing) from the `ics_feeds` default, the App.tsx DEFAULT_FEEDS fallback, and the settings.html demo values. Defaults are now 5 feeds (Google US holidays, CalendarLabs US holidays, CalendarLabs Formula 1, CalendarLabs NFL, Google calendar); the other 5 URLs were verified live (HTTP 200) before release.
+
 ## 0.2.29
 
 Removed focus outline boxes from all elements: a global `outline: none` rule (plus transparent `-webkit-tap-highlight-color`) in index.css eliminates the browser-default white rectangles (e.g. around the next-event button) that appeared during knob navigation. Focus state still changes internally for knob control; only the visible box is gone. The today select-circle and the today-arrive glow pulse are untouched (they use box-shadow, not outline).

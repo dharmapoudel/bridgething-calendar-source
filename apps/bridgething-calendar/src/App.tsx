@@ -37,7 +37,6 @@ const DEFAULT_FEEDS: string[] = [
   'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics',
   'https://www.calendarlabs.com/ical-calendar/ics/76/US_Holidays.ics',
   'https://www.calendarlabs.com/ical-calendar/ics/76/Formula_1.ics',
-  'https://www.fixturedownload.com/download/epl-2025-26-GMT.ics',
   'https://www.calendarlabs.com/ical-calendar/ics/75/NFL.ics',
   'https://calendar.google.com/calendar/ical/ht3jlfaac5lfd6263ulfh4tql8%40group.calendar.google.com/public/basic.ics',
 ];
