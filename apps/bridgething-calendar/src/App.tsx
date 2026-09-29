@@ -297,20 +297,34 @@ export default function App() {
     document.documentElement.dataset.theme = config?.theme ?? 'dark';
   }, [config?.theme]);
 
-  // Detect the background brightness and flip text to dark when the
-  // background is light, so text stays readable. When the Bing backdrop
-  // photo loads, its average luminance decides; when it fails/absent,
-  // fall back to the theme's own background color. Only sets data-bg on
-  // documentElement (CSS swaps text colors globally) — no layout or
-  // size changes.
+  // Detect the background brightness per region and flip text to dark
+  // where the background is light, so text stays readable. The photo is
+  // often brighter in one region (e.g. sky on the left) and darker in
+  // another (e.g. ground under the calendar), so a single global average
+  // can't fix both: the LEFT region (date header, clock, next-event line,
+  // x < 35%) and the RIGHT region (month calendar grid, x >= 35%) are
+  // sampled independently into data-bg-left / data-bg-right. When the
+  // photo is absent/fails, fall back to the theme's own background color.
+  // Only sets attributes on documentElement (CSS swaps text colors) — no
+  // layout or size changes.
   useEffect(() => {
     const root = document.documentElement;
     const theme = config?.theme ?? 'dark';
-    if (!backdropUrl) {
+    const applyThemeFallback = () => {
       // No photo: judge by the theme's solid background instead of doing
       // nothing, so ALL text still gets background-appropriate contrast.
-      if (theme === 'light') root.dataset.bg = 'light';
-      else root.removeAttribute('data-bg');
+      if (theme === 'light') {
+        root.dataset.bgLeft = 'light';
+        root.dataset.bgRight = 'light';
+        root.dataset.bg = 'light';
+      } else {
+        root.removeAttribute('data-bg-left');
+        root.removeAttribute('data-bg-right');
+        root.removeAttribute('data-bg');
+      }
+    };
+    if (!backdropUrl) {
+      applyThemeFallback();
       return;
     }
     let cancelled = false;
@@ -326,28 +340,45 @@ export default function App() {
         if (!ctx) return;
         ctx.drawImage(img, 0, 0, size, size);
         const data = ctx.getImageData(0, 0, size, size).data;
-        let sum = 0;
-        for (let i = 0; i < data.length; i += 4) {
-          sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+        // Left region: x < 35% (date header, clock, next-event line).
+        // Right region: x >= 35% (month calendar grid). Full height both.
+        const splitX = Math.floor(size * 0.35);
+        let leftSum = 0;
+        let leftCount = 0;
+        let rightSum = 0;
+        let rightCount = 0;
+        for (let y = 0; y < size; y++) {
+          for (let x = 0; x < size; x++) {
+            const i = (y * size + x) * 4;
+            const lum = 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+            if (x < splitX) {
+              leftSum += lum;
+              leftCount++;
+            } else {
+              rightSum += lum;
+              rightCount++;
+            }
+          }
         }
-        const avg = sum / (data.length / 4);
         if (cancelled) return;
-        if (avg > 140) root.dataset.bg = 'light';
+        const leftLight = leftSum / leftCount > 140;
+        const rightLight = rightSum / rightCount > 140;
+        if (leftLight) root.dataset.bgLeft = 'light';
+        else root.removeAttribute('data-bg-left');
+        if (rightLight) root.dataset.bgRight = 'light';
+        else root.removeAttribute('data-bg-right');
+        // Legacy global: light if either region is light, so any text
+        // outside the two panels still gets a sane default.
+        if (leftLight || rightLight) root.dataset.bg = 'light';
         else root.removeAttribute('data-bg');
       } catch {
         // Photo unreadable: fall back to the theme's background.
-        if (!cancelled) {
-          if (theme === 'light') root.dataset.bg = 'light';
-          else root.removeAttribute('data-bg');
-        }
+        if (!cancelled) applyThemeFallback();
       }
     };
     img.onerror = () => {
       // Photo failed to load: fall back to the theme's background.
-      if (!cancelled) {
-        if (theme === 'light') root.dataset.bg = 'light';
-        else root.removeAttribute('data-bg');
-      }
+      if (!cancelled) applyThemeFallback();
     };
     img.src = backdropUrl;
     return () => {
@@ -763,6 +794,7 @@ export default function App() {
       </div>
       {/* clock panel: left in landscape, top in portrait */}
       <section
+        data-panel="left"
         className={`relative z-[1] flex shrink-0 flex-col ${
           isPortrait ? 'h-[40%] w-full px-6 pt-5 pb-4' : 'w-[40%] px-7 pt-10 pb-6'
         }`}
@@ -833,6 +865,7 @@ export default function App() {
 
       {/* month grid */}
       <main
+        data-panel="right"
         className={`relative z-[1] flex min-h-0 flex-col ${
           isPortrait ? 'h-[60%] w-full pl-6 pr-10 pt-8 pb-8' : 'flex-1 pl-8 pr-14 pt-10 pb-10'
         }`}

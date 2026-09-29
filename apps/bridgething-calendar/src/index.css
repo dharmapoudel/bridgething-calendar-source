@@ -156,6 +156,44 @@
   --color-near: #2b1d21;
 }
 
+/* Regional background brightness detection: the photo is often brighter in
+   one region (e.g. sky behind the date/clock) and darker in another (e.g.
+   ground behind the calendar grid), so each panel flips independently.
+   App.tsx sets data-bg-left / data-bg-right on documentElement after
+   sampling each region's luminance. Scoped to the panel containers via
+   data-panel so the rules only affect their own region — a bright left
+   side no longer washes out the calendar on the right, or vice versa. */
+[data-bg-left="light"] [data-panel="left"] {
+  --color-off-white: #2b1d21;
+  --color-fg: #2b1d21;
+  --color-muted: #2b1d21;
+  --color-dim: rgb(43 29 33 / 0.78);
+  --color-soft: #2b1d21;
+  --color-near: #2b1d21;
+}
+[data-bg-right="light"] [data-panel="right"] {
+  --color-off-white: #2b1d21;
+  --color-fg: #2b1d21;
+  --color-muted: #2b1d21;
+  --color-dim: rgb(43 29 33 / 0.78);
+  --color-soft: #2b1d21;
+  --color-near: #2b1d21;
+}
+
+/* Subtle text-shadow safety net: keeps text legible even where the regional
+   analysis is slightly off. The shadow color flips with the detected
+   brightness of each panel. Kept faint enough to be invisible when contrast
+   is already good. text-shadow inherits, so setting it on the panel covers
+   all text inside. */
+[data-panel="left"],
+[data-panel="right"] {
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.35);
+}
+[data-bg-left="light"] [data-panel="left"],
+[data-bg-right="light"] [data-panel="right"] {
+  text-shadow: 0 1px 8px rgb(255 255 255 / 0.35);
+}
+
 /* Force-dark for dialog containers (day sheet / modals): re-declares the
    dark theme custom properties so dialogs always render dark regardless of
    the app theme or background-brightness detection. Applied via

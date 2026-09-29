@@ -1,3 +1,7 @@
+## 0.2.27
+
+Regional background brightness analysis — the date/clock panel (left) and the month calendar grid (right) now independently adapt text contrast to the photo behind them, instead of one global average that couldn't fix a bright sky on the left and dark ground on the right at the same time. Each region's luminance is sampled separately (x < 35% vs x >= 35%, same 140 threshold) into data-bg-left / data-bg-right, with the theme-color fallback when no photo loads. Also added a subtle text-shadow safety net on both panels (flips with each region's detected brightness) so text stays readable even where the analysis is slightly off.
+
 ## 0.2.26
 
 Knob long-press (600ms) navigates to today: holding the knob press now closes any open dialog and returns the calendar to today's date. Short-press behavior is unchanged (still opens the focused day's events / closes dialogs), just moved from keydown to keyup so a long-press doesn't double-trigger. The jump to today is animated, not instant: a different month slides the grid horizontally toward today (direction matches past/future, 350ms ease-out), and in the same month the selection circle glides to today's cell with a soft glow pulse on arrival.
