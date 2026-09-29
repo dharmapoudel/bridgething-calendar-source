@@ -2,7 +2,7 @@
 
 ## 0.2.5
 - Daily Bing picture-of-the-day backdrop: fetched fresh every day through the daemon net proxy, blurred and darkened at runtime, cached per local day in localStorage (zero network when today's image is cached); falls back to the flat rose when nothing is cached and keeps the previous image on any failure.
-- Big clock is now Times New Roman (bundled Tinos, metric-compatible, since the Car Thing ships no MS fonts), sized to the reference clock height with shrink-to-fit so long times never overflow the panel.
+- Big clock is now Times New Roman (bundled Tinos, metric-compatible, since the Car Thing ships no MS fonts), hardcoded at 158px with weight 400.
 - Roomier month panel: generous top/right/bottom padding in both orientations; the month name's left edge now aligns exactly with the "S" Sunday header glyph.
 
 ## 0.2.1

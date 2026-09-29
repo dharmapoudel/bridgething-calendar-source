@@ -64,8 +64,8 @@ async function fetchBytes(url: string): Promise<Uint8Array> {
       throw new Error(`image returned HTTP ${reply.response.status}`);
     }
     return new Uint8Array(reply.response.body);
-  } catch (err) {
-    // no daemon reachable (plain browser, test harness): direct fetch.
+  } catch {
+    // no daemon reachable (plain browser): direct fetch.
     const res = await fetch(url);
     if (!res.ok) throw new Error(`image returned HTTP ${res.status}`);
     return new Uint8Array(await res.arrayBuffer());
