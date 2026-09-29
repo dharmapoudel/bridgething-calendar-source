@@ -142,6 +142,20 @@
   --color-panel: #efe3d8;
 }
 
+/* Background brightness detection: when the Bing photo backdrop is light,
+   flip text to dark so it stays readable. App.tsx sets data-bg="light" on
+   documentElement after sampling the photo's luminance. Only text colors
+   change — background, layout, and sizes are untouched. Placed after
+   [data-theme="light"] so it wins on equal specificity. */
+[data-bg="light"] {
+  --color-off-white: #2b1d21;
+  --color-fg: #2b1d21;
+  --color-muted: #2b1d21;
+  --color-dim: rgb(43 29 33 / 0.78);
+  --color-soft: #2b1d21;
+  --color-near: #2b1d21;
+}
+
 @layer base {
   :root {
     color-scheme: dark;

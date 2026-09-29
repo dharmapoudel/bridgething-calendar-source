@@ -1,3 +1,7 @@
+## 0.2.21
+
+Added background brightness detection: App.tsx samples the Bing photo backdrop's average luminance (32x32 canvas); when it's light (>140), documentElement gets data-bg="light" and text colors automatically flip to dark for readability. No UI size/layout changes.
+
 ## 0.2.20
 
 Fixed today-date text color: light mode select ink softened from bright white #f6ede6 to #d9c4b8; reverted 0.2.19 circle background changes (dark back to #fbf4f2, light back to #2b1d21).

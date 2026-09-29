@@ -250,6 +250,50 @@ export default function App() {
     document.documentElement.dataset.theme = config?.theme ?? 'dark';
   }, [config?.theme]);
 
+  // Detect the Bing backdrop photo's brightness and flip text to dark when
+  // the photo is light, so text stays readable over the variable background.
+  // Only sets data-bg on documentElement (CSS swaps text colors) — no layout
+  // or size changes.
+  useEffect(() => {
+    const root = document.documentElement;
+    if (!backdropUrl) {
+      root.removeAttribute('data-bg');
+      return;
+    }
+    let cancelled = false;
+    const img = new Image();
+    img.onload = () => {
+      if (cancelled) return;
+      try {
+        const size = 32;
+        const canvas = document.createElement('canvas');
+        canvas.width = size;
+        canvas.height = size;
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        if (!ctx) return;
+        ctx.drawImage(img, 0, 0, size, size);
+        const data = ctx.getImageData(0, 0, size, size).data;
+        let sum = 0;
+        for (let i = 0; i < data.length; i += 4) {
+          sum += 0.2126 * data[i] + 0.7152 * data[i + 1] + 0.0722 * data[i + 2];
+        }
+        const avg = sum / (data.length / 4);
+        if (cancelled) return;
+        if (avg > 140) root.dataset.bg = 'light';
+        else root.removeAttribute('data-bg');
+      } catch {
+        if (!cancelled) root.removeAttribute('data-bg');
+      }
+    };
+    img.onerror = () => {
+      if (!cancelled) root.removeAttribute('data-bg');
+    };
+    img.src = backdropUrl;
+    return () => {
+      cancelled = true;
+    };
+  }, [backdropUrl]);
+
   // The first feed load usually races the daemon clock; once the phone's
   // timezone is known, re-expand so day buckets and times use it.
   const tzAppliedRef = useRef(false);
