@@ -1,4 +1,124 @@
+## 0.2.29
+
+Removed focus outline boxes from all elements: a global `outline: none` rule (plus transparent `-webkit-tap-highlight-color`) in index.css eliminates the browser-default white rectangles (e.g. around the next-event button) that appeared during knob navigation. Focus state still changes internally for knob control; only the visible box is gone. The today select-circle and the today-arrive glow pulse are untouched (they use box-shadow, not outline).
+
+## 0.2.28
+
+Changed ics_feeds delimiter from newlines to `;` (semicolon): the feed list is now stored as `url1;url2;url3` which displays cleanly in the iOS companion app's single-line input box. settings.html and App.tsx both normalize legacy formats (actual newlines and literal backslash-n sequences are converted to `;`) before splitting, so existing saved values keep working. The webview save path joins with `;`, and the manifest default uses `;` separators.
+
+## 0.2.27
+
+Regional background brightness analysis — the date/clock panel (left) and the month calendar grid (right) now independently adapt text contrast to the photo behind them, instead of one global average that couldn't fix a bright sky on the left and dark ground on the right at the same time. Each region's luminance is sampled separately (x < 35% vs x >= 35%, same 140 threshold) into data-bg-left / data-bg-right, with the theme-color fallback when no photo loads. Also added a subtle text-shadow safety net on both panels (flips with each region's detected brightness) so text stays readable even where the analysis is slightly off.
+
+## 0.2.26
+
+Knob long-press (600ms) navigates to today: holding the knob press now closes any open dialog and returns the calendar to today's date. Short-press behavior is unchanged (still opens the focused day's events / closes dialogs), just moved from keydown to keyup so a long-press doesn't double-trigger. The jump to today is animated, not instant: a different month slides the grid horizontally toward today (direction matches past/future, 350ms ease-out), and in the same month the selection circle glides to today's cell with a soft glow pulse on arrival.
+
+## 0.2.25
+
+Car Thing hardware preset buttons: preset button 1 (or F1) toggles the theme, preset button 2 (or F2) force-refreshes the background from Unsplash. Both work globally, even when the day sheet or event detail dialog is open. The on-screen theme/background buttons from 0.2.24 were removed per user request — hardware buttons only now. The underlying toggleTheme()/refreshBackground() logic and the Unsplash background source are unchanged.
+
+## 0.2.24
+
+Added two on-device buttons (top-right, small and semi-transparent): a theme toggle (sun/moon) that flips between dark and light theme instantly and persists the choice in localStorage (the webapp has no daemon config.set surface), and a background refresh button that force-pulls a random landscape photo from Unsplash. Background source switched from Bing picture-of-the-day to a curated list of 8 Unsplash landscape photo IDs (no API key); daily auto-refresh and per-day caching retained.
+
+## 0.2.23
+
+Dialog (day sheet/modal) now always uses dark theme via data-theme="dark" on the dialog containers (new [data-theme="dark"] CSS rule re-declares dark custom properties so dialogs stay dark regardless of app theme or background detection). Background detection now applies to ALL text: when the Bing photo is absent or fails to load, contrast falls back to the theme's own background color (light theme → dark text) instead of doing nothing. Date header verified already using full-contrast text-off-white.
+
+## 0.2.22
+
+Today-date text in light mode changed from soft white (#d9c4b8) to soft rose (#f2c9c4) per user request.
+
+## 0.2.21
+
+Added background brightness detection: App.tsx samples the Bing photo backdrop's average luminance (32x32 canvas); when it's light (>140), documentElement gets data-bg="light" and text colors automatically flip to dark for readability. No UI size/layout changes.
+
+## 0.2.20
+
+Fixed today-date text color: light mode select ink softened from bright white #f6ede6 to #d9c4b8; reverted 0.2.19 circle background changes (dark back to #fbf4f2, light back to #2b1d21).
+
+## 0.2.19
+
+Softened the today/selected date indicator: dark mode uses soft rose accent (#f2c9c4) instead of bright white, light mode uses muted rose (#b35563) instead of near-black.
+
+## 0.2.18
+
+Flipped theme setting interpretation per user report: stored 'light' now applies the dark theme and vice versa (to match the companion app's display). Empty/unset still defaults to dark.
+
+## 0.2.17
+
+Fixed unreadable secondary text: increased --color-dim opacity from 0.55 to 0.78 in both dark and light themes (light mode was 3.6:1, failing WCAG AA). Note: color-scheme: dark was already set on :root in @layer base, so no change needed there (@theme blocks only accept custom properties).
+
+## 0.2.16
+
+Next-event line now includes all-day events (holidays, games) instead of showing 'Nothing coming up'; all-day events display 'All day' instead of a time.
+
+## 0.2.15
+
+Settings page now displays the default ICS feeds when none are configured; empty stored values fall back to manifest defaults for all settings.
+
+## 0.2.14
+
+Fix all settings: ics_feeds now falls back to default feeds when empty (fixes events not showing after upgrade); week_start now actually controls the calendar's first day; countdown_minutes now shows a countdown for imminent events.
+
+## 0.2.13
+
+Default ICS feeds: US holidays (Google + CalendarLabs), Formula 1, EPL 2025-26, NFL, plus a Google calendar.
+
 # Changelog
+
+## 0.2.12
+- True warm dark theme: the default dark theme is now a near-black warm (#161211) instead of muted rose; light theme unchanged.
+
+## 0.2.11
+- Removed the dead "Show week numbers" and "Show event panel" settings from the companion-app settings schema (neither key is referenced by the app).
+
+## 0.2.10
+- Proportional system: Monday header now matches September at 20px (nudge removed); panel padding symmetric top/bottom (40px landscape, 32px portrait month panel); DOW headers match date size (22px); clock = 2.5 x DOW row height (102.5px, top still glued to DOW top); event line's vertical center aligned to the last date row's center (landscape, 5-week grid).
+
+## 0.2.9
+- Big clock is now Source Serif Pro Medium (weight 500); its font-size spans two rows (DOW header row + first week row): 93.4px landscape / 94.2px portrait.
+- Landscape: the "Monday 9/28" date header nudged down 3.6px so it looks level with "September" (δ = (30 − 22.8)/2); the clock's top margin re-derived to 15.6px so its top edge still meets the S M T W T F S row's top edge.
+- The date header and clock share the same left inset in both orientations.
+
+## 0.2.8
+- Big clock is now Source Serif Pro Bold (72px, -0.02em tracking).
+- Landscape: the clock's top edge aligns with the S M T W T F S header row's top edge; portrait unchanged.
+
+## 0.2.7
+- Landscape: the "Monday 9/28" date header and the "September" month title now share the same top inset (the month title wrapper's top padding was removed in landscape only) so both lines sit at exactly the same height; portrait unchanged.
+
+## 0.2.6
+- Big clock is now Inter Bold (700) at 72px with -2% letter-spacing.
+
+## 0.2.5
+- Daily Bing picture-of-the-day backdrop: fetched fresh every day through the daemon net proxy, blurred and darkened at runtime, cached per local day in localStorage (zero network when today's image is cached); falls back to the flat rose when nothing is cached and keeps the previous image on any failure.
+- Big clock is now Times New Roman (bundled Tinos, metric-compatible, since the Car Thing ships no MS fonts), hardcoded at 158px with weight 400.
+- Roomier month panel: generous top/right/bottom padding in both orientations; the month name's left edge now aligns exactly with the "S" Sunday header glyph.
+
+## 0.2.1
+- Match the reference mockup exactly: flat muted-rose theme (#8C5858), warm-white text, Inter throughout.
+- Removed week numbers, Today button, month arrows, sync footer, pinned agenda, event dots, today highlight, AM/PM on the clock.
+- Sunday-start grid with blank leading cells; title-case day header; month title without year.
+- Bottom-left next-event line is now a swipeable one-line carousel of upcoming events (tap opens detail).
+- Day tap / knob press opens a theme-matched day sheet (bottom sheet in portrait, centered card in landscape).
+
+## 0.2.0
+
+- Redesign: minimal clock/calendar layout inspired by the reference mockup — big live clock with the focused day ("Friday 9/18") and a next-upcoming-event line on the left, month grid on the right with a white selection circle
+- Dark mode by default: muted dark rose theme, with an optional light theme in settings
+- Animations: month grid slides on month change, selection circle glides with spring easing, clock digits fade on minute change
+- Knob: rotate moves the day focus (Left/Right = day, Up/Down = week, crossing month edges steps months), press opens the focused day's events; knob scrolls the event list and detail modal
+- Portrait: clock panel on top (40%), month grid below (60%); event list in a bottom sheet
+
+## 0.1.7
+
+- On-device portrait detection: the daemon pins the layout viewport at 800x480 and rotates the panel, so CSS (orientation: portrait) never matched on the Car Thing and the portrait layout never activated there. Detection now checks screen.orientation first (Radio 0.6.6 approach) with matchMedia as fallback; landscape unchanged
+
+## 0.1.6
+
+- Portrait split: the month grid now takes the top 60% of the screen and the event panel fills the bottom 40% (was 36%); landscape unchanged
 
 ## 0.1.5
 

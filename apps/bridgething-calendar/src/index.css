@@ -1,14 +1,6 @@
 @import "tailwindcss";
 
 @font-face {
-  font-family: "Outfit";
-  font-style: normal;
-  font-weight: 100 900;
-  font-display: block;
-  src: url("./fonts/Outfit-Variable.ttf") format("truetype-variations");
-}
-
-@font-face {
   font-family: "Inter";
   font-style: normal;
   font-weight: 100 900;
@@ -16,9 +8,31 @@
   src: url("./fonts/Inter-Variable.ttf") format("truetype-variations");
 }
 
-/* script fallbacks so event titles in Devanagari (Hindi/Nepali) and Arabic
-   render instead of tofu blocks; unicode-range keeps them out of the way of
-   latin text */
+/* Times New Roman stand-in for the big clock (device ships no MS fonts). */
+@font-face {
+  font-family: "Tinos";
+  font-style: normal;
+  font-weight: 400;
+  font-display: block;
+  src: url("./fonts/Tinos-Regular.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+/* Source Serif Pro for the big clock (device ships no Adobe fonts). */
+@font-face {
+  font-family: "Source Serif Pro";
+  font-style: normal;
+  font-weight: 500;
+  font-display: block;
+  src: url("./fonts/SourceSerifPro-Medium.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA,
+    U+02DC, U+2000-206F, U+2074, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+/* Devanagari/Arabic fallbacks so event titles don't render as tofu. */
 @font-face {
   font-family: "Noto Sans Devanagari";
   font-style: normal;
@@ -38,24 +52,28 @@
 }
 
 @theme {
-  /* Catppuccin Mocha — the Omarchy default theme */
-  --color-off-white: #cdd6f4;
-  --color-bg: #1e1e2e;
-  --color-screen: #181825;
-  --color-fg: #cdd6f4;
-  --color-muted: #a6adc8;
-  --color-accent: #89b4fa;
-  --color-ok: #a6e3a1;
-  --color-err: #f38ba8;
-  --color-warn: #fab387;
-  --color-experimental: #fab387;
+  --color-off-white: #fbf4f2;
+  --color-bg: #161211;
+  --color-screen: #161211;
+  --color-fg: #fbf4f2;
+  --color-muted: #fbf4f2;
+  --color-accent: #f2c9c4;
+  --color-ok: #b7e4b2;
+  --color-err: #f5a3b8;
+  --color-warn: #f7c489;
+  --color-experimental: #f7c489;
 
-  --color-rule: #313244;
-  --color-rule-strong: #45475a;
-  --color-edge: #585b70;
-  --color-dim: #6c7086;
-  --color-soft: #9399b2;
-  --color-near: #bac2de;
+  --color-rule: rgb(251 244 242 / 0.16);
+  --color-rule-strong: rgb(251 244 242 / 0.28);
+  --color-edge: rgb(251 244 242 / 0.32);
+  --color-dim: rgb(251 244 242 / 0.78);
+  --color-soft: #fbf4f2;
+  --color-near: #fbf4f2;
+
+  --color-select: #fbf4f2;
+  --color-select-ink: #33272b;
+
+  --color-panel: #221a16;
 
   --color-accent-soft: color-mix(in srgb, var(--color-accent) 14%, transparent);
   --color-ok-soft: color-mix(in srgb, var(--color-ok) 14%, transparent);
@@ -75,7 +93,7 @@
   --text-hero: 1.375rem;
   --text-screen-title: 2.125rem;
 
-  --font-display: "Outfit", "Noto Sans Devanagari", "Noto Sans Arabic", system-ui, sans-serif;
+  --font-display: "Inter", "Noto Sans Devanagari", "Noto Sans Arabic", system-ui, sans-serif;
   --font-body: "Inter", "Noto Sans Devanagari", "Noto Sans Arabic", system-ui, sans-serif;
   --font-mono: ui-monospace, "SF Mono", Menlo, Consolas, monospace;
 
@@ -84,6 +102,100 @@
   --tracking-tight-1: -0.01em;
 
   --radius-none: 0;
+}
+
+/* Light theme (data-theme set on documentElement, dark by default). */
+[data-theme="light"] {
+  color-scheme: light;
+
+  --color-off-white: #2b1d21;
+  --color-bg: #f6efe9;
+  --color-screen: #f6efe9;
+  --color-fg: #2b1d21;
+  --color-muted: #2b1d21;
+  --color-accent: #b35563;
+  --color-ok: #4d8a4a;
+  --color-err: #c2456b;
+  --color-warn: #c47a3a;
+  --color-experimental: #c47a3a;
+
+  --color-rule: #e8d9d0;
+  --color-rule-strong: #d9c4b8;
+  --color-edge: #c0a89e;
+  --color-dim: rgb(43 29 33 / 0.78);
+  --color-soft: #2b1d21;
+  --color-near: #2b1d21;
+
+  --color-select: #2b1d21;
+  --color-select-ink: #f2c9c4;
+
+  --color-panel: #efe3d8;
+}
+
+/* Photo backdrop is light -> flip text to dark. Only text colors change. */
+[data-bg="light"] {
+  --color-off-white: #2b1d21;
+  --color-fg: #2b1d21;
+  --color-muted: #2b1d21;
+  --color-dim: rgb(43 29 33 / 0.78);
+  --color-soft: #2b1d21;
+  --color-near: #2b1d21;
+}
+
+/* Regional brightness: left/right panels flip independently via data-panel. */
+[data-bg-left="light"] [data-panel="left"] {
+  --color-off-white: #2b1d21;
+  --color-fg: #2b1d21;
+  --color-muted: #2b1d21;
+  --color-dim: rgb(43 29 33 / 0.78);
+  --color-soft: #2b1d21;
+  --color-near: #2b1d21;
+}
+[data-bg-right="light"] [data-panel="right"] {
+  --color-off-white: #2b1d21;
+  --color-fg: #2b1d21;
+  --color-muted: #2b1d21;
+  --color-dim: rgb(43 29 33 / 0.78);
+  --color-soft: #2b1d21;
+  --color-near: #2b1d21;
+}
+
+/* Text-shadow safety net for marginal contrast; color flips per panel. */
+[data-panel="left"],
+[data-panel="right"] {
+  text-shadow: 0 1px 8px rgb(0 0 0 / 0.35);
+}
+[data-bg-left="light"] [data-panel="left"],
+[data-bg-right="light"] [data-panel="right"] {
+  text-shadow: 0 1px 8px rgb(255 255 255 / 0.35);
+}
+
+/* Force-dark dialogs: re-declares dark vars so dialogs stay dark in any theme. */
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --color-off-white: #fbf4f2;
+  --color-bg: #161211;
+  --color-screen: #161211;
+  --color-fg: #fbf4f2;
+  --color-muted: #fbf4f2;
+  --color-accent: #f2c9c4;
+  --color-ok: #b7e4b2;
+  --color-err: #f5a3b8;
+  --color-warn: #f7c489;
+  --color-experimental: #f7c489;
+
+  --color-rule: rgb(251 244 242 / 0.16);
+  --color-rule-strong: rgb(251 244 242 / 0.28);
+  --color-edge: rgb(251 244 242 / 0.32);
+  --color-dim: rgb(251 244 242 / 0.78);
+  --color-soft: #fbf4f2;
+  --color-near: #fbf4f2;
+
+  --color-select: #fbf4f2;
+  --color-select-ink: #33272b;
+
+  --color-panel: #221a16;
 }
 
 @layer base {
@@ -158,17 +270,44 @@
   }
 }
 
+@keyframes clock-fade {
+  from {
+    opacity: 0.2;
+    transform: translateY(4px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
 .month-in-next {
-  animation: month-in-next 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: month-in-next 350ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
 
 .month-in-prev {
-  animation: month-in-prev 260ms cubic-bezier(0.22, 1, 0.36, 1);
+  animation: month-in-prev 350ms cubic-bezier(0.22, 1, 0.36, 1);
   will-change: transform, opacity;
 }
 .month-in-fade {
   animation: month-in-fade 200ms ease-out;
+}
+
+/* goToday arrival pulse: glow ring on today's cell (box-shadow only). */
+@keyframes today-arrive {
+  0% {
+    box-shadow: 0 0 0 0 var(--color-accent);
+    opacity: 0.55;
+  }
+  100% {
+    box-shadow: 0 0 0 14px transparent;
+    opacity: 1;
+  }
+}
+
+.today-arrive {
+  animation: today-arrive 500ms ease-out;
 }
 
 .modal-backdrop-in {
@@ -180,12 +319,40 @@
   will-change: transform, opacity;
 }
 
+/* Big clock: fades in on each minute change (re-mounted via React key). */
+.clock-fade {
+  animation: clock-fade 380ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform, opacity;
+}
+
+/* Backdrop: fades in on first load and day-rollover swap. */
+.backdrop-swap {
+  animation: backdrop-in 600ms ease-out;
+}
+
+.select-circle {
+  transition: transform 250ms cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: transform;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .month-in-next,
   .month-in-prev,
   .month-in-fade,
+  .today-arrive,
   .modal-backdrop-in,
-  .modal-pop {
+  .modal-pop,
+  .clock-fade,
+  .backdrop-swap {
     animation: none;
   }
+  .select-circle {
+    transition: none;
+  }
+}
+
+/* No outline boxes anywhere (knob focus still works, just invisible). */
+*, *::before, *::after {
+  outline: none !important;
+  -webkit-tap-highlight-color: transparent;
 }
