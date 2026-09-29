@@ -1,5 +1,10 @@
 # Changelog
 
+## 0.2.9
+- Big clock is now Source Serif Pro Medium (weight 500); its font-size spans two rows (DOW header row + first week row): 93.4px landscape / 94.2px portrait.
+- Landscape: the "Monday 9/28" date header nudged down 3.6px so it looks level with "September" (δ = (30 − 22.8)/2); the clock's top margin re-derived to 15.6px so its top edge still meets the S M T W T F S row's top edge.
+- The date header and clock share the same left inset in both orientations.
+
 ## 0.2.8
 - Big clock is now Source Serif Pro Bold (72px, -0.02em tracking).
 - Landscape: the clock's top edge aligns with the S M T W T F S header row's top edge; portrait unchanged.

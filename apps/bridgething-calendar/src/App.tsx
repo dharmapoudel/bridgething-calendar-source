@@ -560,7 +560,14 @@ export default function App() {
           isPortrait ? 'h-[40%] w-full px-6 pt-5 pb-4' : 'w-[40%] px-7 py-6'
         }`}
       >
-        <div className="font-body text-[0.95rem] font-medium text-off-white">
+        <div
+          className="font-body text-[0.95rem] font-medium text-off-white"
+          style={{
+            // landscape: optical nudge so the smaller date line looks level with
+            // "September" — δ = (septBox − dateBox)/2 = (30 − 22.8)/2 = 3.6px.
+            marginTop: isPortrait ? undefined : 3.6,
+          }}
+        >
           {dayHeaderLabel(selectedKey)}
         </div>
         <div
@@ -568,12 +575,15 @@ export default function App() {
           className="clock-fade mt-2 leading-none whitespace-nowrap text-off-white"
           style={{
             fontFamily: '"Source Serif Pro", Georgia, "Times New Roman", serif',
-            fontWeight: 700,
-            fontSize: 72,
+            fontWeight: 500,
+            // font-size spans 2 rows: DOW row (12.8*1.5 + pb-2 = 27.2) + one week
+            // row track ((panelH − chrome)/5 − gap). landscape: 27.2 + 66.16 = 93.4;
+            // portrait: 27.2 + 66.96 = 94.2. leading-none keeps the em box exact.
+            fontSize: isPortrait ? 94.2 : 93.4,
             letterSpacing: '-0.02em',
-            // landscape: clock top edge == dow row top edge. both panels share top inset y0,
-            // so clock mt = septBox + septPadBottom - dateBox = 20*1.5 + 12 - 15.2*1.5 = 19.2px.
-            marginTop: isPortrait ? undefined : 19.2,
+            // landscape: clockTop == dowTop. mondayTop = y0+3.6, so
+            // mt = (septBox + septPadBottom) − dateBox − δ = 42 − 22.8 − 3.6 = 15.6px.
+            marginTop: isPortrait ? undefined : 15.6,
           }}
         >
           {clockMain}
