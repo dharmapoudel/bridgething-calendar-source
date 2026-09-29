@@ -1,0 +1,4 @@
+Source Serif Pro (bundled as SourceSerifPro-Bold.woff2, latin subset, weight 700)
+Copyright 2014-2021 Adobe (https://github.com/adobe-fonts/source-serif)
+Licensed under the SIL Open Font License, Version 1.1.
+Used here for the big clock typeface.

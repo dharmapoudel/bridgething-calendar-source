@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.2.8
+- Big clock is now Source Serif Pro Bold (72px, -0.02em tracking).
+- Landscape: the clock's top edge aligns with the S M T W T F S header row's top edge; portrait unchanged.
+
 ## 0.2.7
 - Landscape: the "Monday 9/28" date header and the "September" month title now share the same top inset (the month title wrapper's top padding was removed in landscape only) so both lines sit at exactly the same height; portrait unchanged.
 

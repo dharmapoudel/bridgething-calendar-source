@@ -567,10 +567,13 @@ export default function App() {
           key={minuteKey}
           className="clock-fade mt-2 leading-none whitespace-nowrap text-off-white"
           style={{
-            fontFamily: '"Inter", "Noto Sans Devanagari", "Noto Sans Arabic", system-ui, sans-serif',
+            fontFamily: '"Source Serif Pro", Georgia, "Times New Roman", serif',
             fontWeight: 700,
             fontSize: 72,
             letterSpacing: '-0.02em',
+            // landscape: clock top edge == dow row top edge. both panels share top inset y0,
+            // so clock mt = septBox + septPadBottom - dateBox = 20*1.5 + 12 - 15.2*1.5 = 19.2px.
+            marginTop: isPortrait ? undefined : 19.2,
           }}
         >
           {clockMain}
