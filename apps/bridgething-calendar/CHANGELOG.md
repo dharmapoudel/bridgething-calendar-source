@@ -1,3 +1,7 @@
+## 0.2.14
+
+Fix all settings: ics_feeds now falls back to default feeds when empty (fixes events not showing after upgrade); week_start now actually controls the calendar's first day; countdown_minutes now shows a countdown for imminent events.
+
 ## 0.2.13
 
 Default ICS feeds: US holidays (Google + CalendarLabs), Formula 1, EPL 2025-26, NFL, plus a Google calendar.

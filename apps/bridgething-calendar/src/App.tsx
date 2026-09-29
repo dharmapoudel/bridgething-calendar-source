@@ -6,13 +6,16 @@ import {
   dateFromKey,
   dateKey,
   eventsForDateKey,
+  formatCountdown,
   formatKeyHeading,
   formatTime,
   formatTimeRange,
   indexEventsByDate,
   isDeclined,
   keyForDate,
+  millisUntil,
   monthGrid,
+  shouldAnnounce,
   stepMonth,
   todayKeyFor,
   truncateTitle,
@@ -25,7 +28,21 @@ interface AppConfig {
   feeds: string[];
   refreshMinutes: number;
   theme: 'dark' | 'light';
+  weekStart: number;
+  countdownMinutes: number;
 }
+
+// Fallback when the stored ics_feeds value is empty (e.g. users who installed
+// before defaults existed): the daemon only seeds manifest defaults on first
+// install, so upgrades would otherwise get zero feeds.
+const DEFAULT_FEEDS: string[] = [
+  'https://calendar.google.com/calendar/ical/en.usa%23holiday%40group.v.calendar.google.com/public/basic.ics',
+  'https://www.calendarlabs.com/ical-calendar/ics/76/US_Holidays.ics',
+  'https://www.calendarlabs.com/ical-calendar/ics/76/Formula_1.ics',
+  'https://www.fixturedownload.com/download/epl-2025-26-GMT.ics',
+  'https://www.calendarlabs.com/ical-calendar/ics/75/NFL.ics',
+  'https://calendar.google.com/calendar/ical/ht3jlfaac5lfd6263ulfh4tql8%40group.calendar.google.com/public/basic.ics',
+];
 
 const WEEKDAY_LETTERS = ['S', 'M', 'T', 'W', 'T', 'F', 'S'];
 // Horizontal nudge (px) aligning the month name's left edge exactly with the
@@ -41,14 +58,19 @@ function parseConfig(raw: {
   feeds: string | null;
   refresh: string | null;
   theme: string | null;
+  weekStart: string | null;
+  countdown: string | null;
 }): AppConfig {
-  const feeds = (raw.feeds || '')
+  const parsed = (raw.feeds || '')
     .split('\n')
     .map(s => s.trim())
     .filter(s => /^https:\/\//i.test(s) || /^http:\/\/(localhost|127\.0\.0\.1|\[::1\])/i.test(s));
+  const feeds = parsed.length === 0 ? DEFAULT_FEEDS : parsed;
   const refreshMinutes = clampInt(raw.refresh, 15, 5, 120);
   const theme = (raw.theme || '').trim().toLowerCase() === 'light' ? 'light' : 'dark';
-  return { feeds, refreshMinutes, theme };
+  const weekStart = (raw.weekStart || '').trim().toLowerCase() === 'sunday' ? 0 : 1;
+  const countdownMinutes = clampInt(raw.countdown, 30, 5, 180);
+  return { feeds, refreshMinutes, theme, weekStart, countdownMinutes };
 }
 
 function clampInt(raw: string | null, fallback: number, min: number, max: number): number {
@@ -147,12 +169,14 @@ export default function App() {
     // URL params override companion config (testing, kiosk setups).
     const params = new URLSearchParams(window.location.search);
     const paramFeeds = params.get('ics_feeds');
-    const [feeds, refresh, theme] = await Promise.all([
+    const [feeds, refresh, theme, weekStart, countdown] = await Promise.all([
       paramFeeds ?? getConfig('ics_feeds'),
       params.get('refresh_minutes') ?? getConfig('refresh_minutes'),
       params.get('theme') ?? getConfig('theme'),
+      params.get('week_start') ?? getConfig('week_start'),
+      params.get('countdown_minutes') ?? getConfig('countdown_minutes'),
     ]);
-    setConfig(parseConfig({ feeds, refresh, theme }));
+    setConfig(parseConfig({ feeds, refresh, theme, weekStart, countdown }));
   }, []);
 
   const loadFeedsNow = useCallback(async (cfg: AppConfig) => {
@@ -251,8 +275,8 @@ export default function App() {
   const todayKey = useMemo(() => todayKeyFor(now, timeZone), [now, timeZone]);
   // The reference starts weeks on Sunday with blank leading cells.
   const grid = useMemo(
-    () => monthGrid(viewYear, viewMonth, 0, todayKey, index),
-    [viewYear, viewMonth, todayKey, index],
+    () => monthGrid(viewYear, viewMonth, config?.weekStart ?? 1, todayKey, index),
+    [viewYear, viewMonth, config?.weekStart, todayKey, index],
   );
   const selectedEvents = useMemo(() => {
     const list = eventsForDateKey(index, selectedKey);
@@ -531,6 +555,9 @@ export default function App() {
     </div>
   );
 
+  const weekStartIdx = config?.weekStart ?? 1;
+  const dowLetters = [...WEEKDAY_LETTERS.slice(weekStartIdx), ...WEEKDAY_LETTERS.slice(0, weekStartIdx)];
+
   return (
     <div
       className={`relative flex h-full w-full ${isPortrait ? 'flex-col' : 'flex-row'} text-off-white`}
@@ -608,6 +635,12 @@ export default function App() {
                 lineDir === 'next' ? 'month-in-next' : 'month-in-prev'
               }`}
             >
+              {lineEvent && config && shouldAnnounce(lineEvent, now, config.countdownMinutes) ? (
+                <>
+                  <span className="text-accent">{formatCountdown(millisUntil(lineEvent, now))}</span>
+                  {'  '}
+                </>
+              ) : null}
               <span className="text-off-white/80">{formatTime(lineEvent.start, timeZone)}</span>
               {'  '}
               <span className="font-medium">{truncateTitle(lineEvent.title, 26)}</span>
@@ -636,7 +669,7 @@ export default function App() {
           </div>
         </div>
         <div className="grid shrink-0 grid-cols-7 gap-1">
-          {WEEKDAY_LETTERS.map((letter, i) => (
+          {dowLetters.map((letter, i) => (
             <div
               key={i}
               className="pb-2 text-center font-body text-[1.375rem] text-dim"
