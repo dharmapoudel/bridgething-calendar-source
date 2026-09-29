@@ -1,3 +1,7 @@
+## 0.2.22
+
+Today-date text in light mode changed from soft white (#d9c4b8) to soft rose (#f2c9c4) per user request.
+
 ## 0.2.21
 
 Added background brightness detection: App.tsx samples the Bing photo backdrop's average luminance (32x32 canvas); when it's light (>140), documentElement gets data-bg="light" and text colors automatically flip to dark for readability. No UI size/layout changes.
