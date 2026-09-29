@@ -1,3 +1,7 @@
+## 0.2.16
+
+Next-event line now includes all-day events (holidays, games) instead of showing 'Nothing coming up'; all-day events display 'All day' instead of a time.
+
 ## 0.2.15
 
 Settings page now displays the default ICS feeds when none are configured; empty stored values fall back to manifest defaults for all settings.

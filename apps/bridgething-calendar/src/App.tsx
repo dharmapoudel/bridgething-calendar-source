@@ -287,12 +287,11 @@ export default function App() {
   }, [index, selectedKey]);
 
   // Upcoming events feed the swipeable one-line next-event carousel.
-  // All-day events are excluded (same as the old next-event logic): they
-  // start at midnight, so they read as hours in the past or as tomorrow.
+  // All-day events are included: holiday/sports feeds are all-day-only,
+  // so excluding them left the line stuck on "Nothing coming up".
   const upcoming = useMemo(() => {
     const out: CalEvent[] = [];
     for (const ev of visible) {
-      if (ev.allDay) continue;
       const ms = Date.parse(ev.start);
       if (Number.isNaN(ms) || ms < now) continue;
       out.push(ev);
@@ -641,7 +640,7 @@ export default function App() {
                   {'  '}
                 </>
               ) : null}
-              <span className="text-off-white/80">{formatTime(lineEvent.start, timeZone)}</span>
+              <span className="text-off-white/80">{lineEvent.allDay ? 'All day' : formatTime(lineEvent.start, timeZone)}</span>
               {'  '}
               <span className="font-medium">{truncateTitle(lineEvent.title, 26)}</span>
             </button>
