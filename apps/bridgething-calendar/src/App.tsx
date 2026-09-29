@@ -405,7 +405,7 @@ export default function App() {
     }
     const wr = wrap.getBoundingClientRect();
     const cr = cell.getBoundingClientRect();
-    const s = Math.max(0, Math.min(cr.width, cr.height) - 6);
+    const s = isPortrait ? 40 : 60; // reference-exact selection circle
     const x = cr.left - wr.left + (cr.width - s) / 2;
     const y = cr.top - wr.top + (cr.height - s) / 2;
     setCircle(prev =>
@@ -524,28 +524,49 @@ export default function App() {
     </div>
   );
 
+  // Reference-exact geometry (landscape 800x480, measured from the mockup).
+  // Portrait reuses the same visual language with 0.6x type scale.
+  const px = (n: number) => Math.round(n * (isPortrait ? 0.6 : 1));
+  const circleD = isPortrait ? 40 : 60;
+  const sixRows = grid.length > 5;
+  const colW = isPortrait ? 36 : 60;
+  const pitchY = isPortrait ? (sixRows ? 52 : 62) : sixRows ? 62 : 72;
+  const firstCenterY = isPortrait ? (sixRows ? 100 : 105) : sixRows ? 140 : 176;
+  // Landscape: the month column starts at x=250 (the clock panel is 250 wide),
+  // so gridLeft=0 puts column centers at 280..640 like the reference.
+  // Portrait centers the narrower grid.
+  const gridLeft = isPortrait ? (480 - 7 * colW) / 2 : 0;
+
   return (
     <div className={`flex h-full w-full ${isPortrait ? 'flex-col' : 'flex-row'} bg-bg text-off-white`}>
       {/* clock panel: left in landscape, top in portrait */}
       <section
-        className={`flex shrink-0 flex-col ${
-          isPortrait ? 'h-[40%] w-full px-6 pt-5 pb-4' : 'w-[40%] px-7 py-6'
-        }`}
+        className="relative shrink-0"
+        style={isPortrait ? { width: '100%', height: 320 } : { width: 250, height: '100%' }}
       >
-        <div className="font-body text-[0.95rem] font-medium text-off-white">
+        <div
+          className="absolute font-body font-medium text-off-white"
+          style={{ left: px(28), top: px(20), fontSize: px(25) }}
+        >
           {dayHeaderLabel(selectedKey)}
         </div>
         <div
           key={minuteKey}
-          className="clock-fade mt-2 font-body font-light leading-none tracking-tight text-off-white"
-          style={{ fontSize: isPortrait ? 64 : 88 }}
+          className="clock-fade absolute font-body font-light leading-none tracking-tight text-off-white"
+          style={{ left: px(28), top: px(44), fontSize: px(140) }}
         >
           {clockMain}
         </div>
         {/* one-line next-event carousel: swipe to see more */}
         <div
-          className="mt-auto w-full select-none"
-          style={{ touchAction: 'pan-y' }}
+          className="absolute select-none"
+          style={{
+            left: px(28),
+            right: 10,
+            top: px(468),
+            transform: 'translateY(-50%)',
+            touchAction: 'pan-y',
+          }}
           onTouchStart={onLineTouchStart}
           onTouchEnd={onLineTouchEnd}
         >
@@ -553,47 +574,66 @@ export default function App() {
             <button
               key={`${lineIdx}-${lineDir}`}
               onClick={() => setDetail(lineEvent)}
-              className={`w-full truncate text-left font-body text-[1rem] text-off-white active:opacity-70 ${
+              className={`w-full truncate text-left font-body font-medium text-off-white active:opacity-70 ${
                 lineDir === 'next' ? 'month-in-next' : 'month-in-prev'
               }`}
+              style={{ fontSize: px(24), lineHeight: 1.25 }}
             >
-              <span className="text-off-white/80">{formatTime(lineEvent.start, timeZone)}</span>
+              {formatTime(lineEvent.start, timeZone)}
               {'  '}
-              <span className="font-medium">{truncateTitle(lineEvent.title, 26)}</span>
+              {truncateTitle(lineEvent.title, 26)}
             </button>
           ) : (
-            <div className="font-body text-[1rem] text-dim">Nothing coming up</div>
+            <div className="font-body text-dim" style={{ fontSize: px(24), lineHeight: 1.25 }}>
+              Nothing coming up
+            </div>
           )}
         </div>
       </section>
 
-      {/* month grid */}
+      {/* month column */}
       <main
-        className={`flex min-h-0 flex-col ${isPortrait ? 'h-[60%] w-full px-5 pb-3' : 'flex-1 px-6 pb-4'}`}
+        className="relative min-h-0 flex-1"
         style={{ touchAction: 'pan-x' }}
         onTouchStart={onTouchStart}
         onTouchEnd={onTouchEnd}
       >
-        <div className="flex shrink-0 items-center py-3">
-          <div className="font-body text-[1.25rem] font-medium text-off-white">
-            {MONTH_NAMES[viewMonth]}
-          </div>
+        <div
+          className="absolute font-body font-medium text-off-white"
+          style={
+            isPortrait
+              ? { left: gridLeft, top: 12, fontSize: 16 }
+              : { left: 30, top: 20, fontSize: 26 }
+          }
+        >
+          {MONTH_NAMES[viewMonth]}
         </div>
-        <div className="grid shrink-0 grid-cols-7 gap-1">
-          {WEEKDAY_LETTERS.map((letter, i) => (
-            <div
-              key={i}
-              className="pb-2 text-center font-body text-[0.8rem] text-dim"
-            >
-              {letter}
-            </div>
-          ))}
+        <div
+          className="absolute"
+          style={{
+            left: gridLeft,
+            top: isPortrait ? 54 : 104,
+            transform: 'translateY(-50%)',
+            width: 7 * colW,
+          }}
+        >
+          <div className="grid" style={{ gridTemplateColumns: `repeat(7, ${colW}px)` }}>
+            {WEEKDAY_LETTERS.map((letter, i) => (
+              <div
+                key={i}
+                className="text-center font-body font-medium text-dim"
+                style={{ fontSize: isPortrait ? 13 : 22 }}
+              >
+                {letter}
+              </div>
+            ))}
+          </div>
         </div>
         <div
           key={`${viewYear}-${viewMonth}`}
           ref={gridWrapRef}
-          className={`relative grid min-h-0 flex-1 gap-1 ${navAnimClass}`}
-          style={{ gridTemplateRows: `repeat(${grid.length}, minmax(0, 1fr))` }}
+          className={`absolute ${navAnimClass}`}
+          style={{ left: gridLeft, top: firstCenterY - pitchY / 2, width: 7 * colW }}
         >
           {circle && (
             <div
@@ -603,8 +643,8 @@ export default function App() {
                 position: 'absolute',
                 left: 0,
                 top: 0,
-                width: circle.s,
-                height: circle.s,
+                width: circleD,
+                height: circleD,
                 borderRadius: 9999,
                 transform: `translate(${circle.x}px, ${circle.y}px)`,
                 background: 'var(--color-select)',
@@ -613,7 +653,11 @@ export default function App() {
             />
           )}
           {grid.map((week, wi) => (
-            <div key={wi} className="grid min-h-0 grid-cols-7 gap-1">
+            <div
+              key={wi}
+              className="grid"
+              style={{ gridTemplateColumns: `repeat(7, ${colW}px)`, height: pitchY }}
+            >
               {week.days.map(day =>
                 day.inMonth ? (
                   <button
@@ -623,14 +667,18 @@ export default function App() {
                       else cellRefs.current.delete(day.key);
                     }}
                     onClick={() => onDayClick(day.key)}
-                    className="relative flex min-h-0 items-center justify-center rounded active:bg-neutral-soft"
+                    className="relative flex items-center justify-center"
+                    style={{ width: colW, height: pitchY }}
                   >
                     <span
-                      className={`relative z-[1] font-body text-date leading-none ${
+                      className={`relative z-[1] font-body font-medium leading-none ${
                         day.key === selectedKey
-                          ? 'font-semibold text-[var(--color-select-ink)]'
-                          : 'font-normal text-off-white'
+                          ? 'text-[var(--color-select-ink)]'
+                          : day.weekend
+                            ? 'text-dim'
+                            : 'text-off-white'
                       }`}
+                      style={{ fontSize: isPortrait ? 17 : 26 }}
                     >
                       {day.day}
                     </span>
@@ -684,7 +732,7 @@ export default function App() {
             <div className="flex items-center gap-2">
               <span
                 className="h-3 w-3 shrink-0 rounded-full"
-                style={{ backgroundColor: detail.color || '#fbf4f2' }}
+                style={{ backgroundColor: detail.color || '#fdf9f7' }}
               />
               <div className="font-body text-[0.7rem] font-medium uppercase tracking-[0.18em] text-dim">
                 {detail.calendarName}
@@ -733,7 +781,7 @@ function EventRow({
       <div className="flex items-center gap-2 px-4 py-2.5">
         <span
           className="h-8 w-1 shrink-0 rounded-full"
-          style={{ backgroundColor: event.color || '#fbf4f2' }}
+          style={{ backgroundColor: event.color || '#fdf9f7' }}
         />
         <button className="min-w-0 flex-1 text-left" onClick={onOpen}>
           <div

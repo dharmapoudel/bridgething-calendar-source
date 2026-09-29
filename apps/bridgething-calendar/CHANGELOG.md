@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.2.2
+- Pixel-match the reference mockup: forensic re-measurement of every size and color.
+- Clock is now 140px Inter Light (was 84px); day header 25px and month title 26px Inter Medium.
+- Saturday AND Sunday columns dimmed to 58% like the reference; weekday headers also 58%.
+- Background corrected to flat #8F5B5B, text to #FDF9F7; selection circle fixed 60px with #3A2E33 ink.
+- Grid column pitch 60 (S column center x=280), row pitch 72, first row center y=176.
+- Next-event line is uniform full-white 24px Medium (no two-tone), still swipeable.
+
+
 ## 0.2.1
 - Match the reference mockup exactly: flat muted-rose theme (#8C5858), warm-white text, Inter throughout.
 - Removed week numbers, Today button, month arrows, sync footer, pinned agenda, event dots, today highlight, AM/PM on the clock.

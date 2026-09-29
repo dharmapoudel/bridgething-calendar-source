@@ -31,27 +31,27 @@
 
 @theme {
   /* Reference look (default): flat muted rose, warm white text */
-  --color-off-white: #fbf4f2;
-  --color-bg: #8c5858;
-  --color-screen: #8c5858;
-  --color-fg: #fbf4f2;
-  --color-muted: #fbf4f2;
+  --color-off-white: #fdf9f7;
+  --color-bg: #8f5b5b;
+  --color-screen: #8f5b5b;
+  --color-fg: #fdf9f7;
+  --color-muted: #fdf9f7;
   --color-accent: #f2c9c4;
   --color-ok: #b7e4b2;
   --color-err: #f5a3b8;
   --color-warn: #f7c489;
   --color-experimental: #f7c489;
 
-  --color-rule: rgb(251 244 242 / 0.16);
-  --color-rule-strong: rgb(251 244 242 / 0.28);
-  --color-edge: rgb(251 244 242 / 0.32);
-  --color-dim: rgb(251 244 242 / 0.55);
-  --color-soft: #fbf4f2;
-  --color-near: #fbf4f2;
+  --color-rule: rgb(253 249 247 / 0.16);
+  --color-rule-strong: rgb(253 249 247 / 0.28);
+  --color-edge: rgb(253 249 247 / 0.32);
+  --color-dim: rgb(253 249 247 / 0.58);
+  --color-soft: #fdf9f7;
+  --color-near: #fdf9f7;
 
   /* day-focus selection circle: warm white with dark ink */
-  --color-select: #fbf4f2;
-  --color-select-ink: #33272b;
+  --color-select: #fdf9f7;
+  --color-select-ink: #3a2e33;
 
   /* sheet / modal surface: a deeper rose than the flat background */
   --color-panel: #7a4c4c;
