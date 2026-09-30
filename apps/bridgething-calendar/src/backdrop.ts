@@ -1,5 +1,6 @@
-// Daily Unsplash landscape backdrop, cached per local day as a blurred JPEG data URL.
-// Failures keep the previous image; with no cache the hook returns null.
+// Daily Unsplash landscape backdrop, cached as blurred JPEG data URLs.
+// The cache holds at most 2 images (current + previous); legacy Bing-era keys
+// are purged on startup so old versions can't keep filling storage.
 
 import { useCallback, useEffect, useState } from 'react';
 import { getClient } from './client';
@@ -7,6 +8,10 @@ import { todayKeyFor } from './model';
 
 const DATE_KEY = 'unsplashBackdropDate';
 const DATA_KEY = 'unsplashBackdropDataUrl';
+const PREV_DATE_KEY = 'unsplashBackdropPrevDate';
+const PREV_DATA_KEY = 'unsplashBackdropPrevDataUrl';
+// Bing-era keys (0.2.21-0.2.23); deleted on startup.
+const LEGACY_KEYS = ['bingBackdropDate', 'bingBackdropDataUrl'];
 const CHECK_MS = 30 * 60 * 1000;
 const BLUR_PX = 28;
 
@@ -22,24 +27,51 @@ const UNSPLASH_IDS = [
   'photo-1472214103451-9374bd1c798e',
 ];
 
+// 800x480 matches the Car Thing display; no reason to download larger.
 function randomUnsplashUrl(): string {
   const id = UNSPLASH_IDS[Math.floor(Math.random() * UNSPLASH_IDS.length)];
   return `https://images.unsplash.com/${id}?w=800&h=480&fit=crop&q=80`;
 }
 
-function readCache(): { date: string | null; dataUrl: string | null } {
+interface BackdropCache {
+  date: string | null;
+  dataUrl: string | null;
+  prevDate: string | null;
+  prevDataUrl: string | null;
+}
+
+function readCache(): BackdropCache {
   try {
     return {
       date: localStorage.getItem(DATE_KEY),
       dataUrl: localStorage.getItem(DATA_KEY),
+      prevDate: localStorage.getItem(PREV_DATE_KEY),
+      prevDataUrl: localStorage.getItem(PREV_DATA_KEY),
     };
   } catch {
-    return { date: null, dataUrl: null };
+    return { date: null, dataUrl: null, prevDate: null, prevDataUrl: null };
   }
 }
 
+// Delete legacy keys from older versions so they stop occupying storage.
+function purgeLegacyCaches(): void {
+  try {
+    for (const key of LEGACY_KEYS) localStorage.removeItem(key);
+  } catch {
+    // storage unavailable: nothing to purge.
+  }
+}
+
+// LRU write: current image moves to the previous slot, new image becomes
+// current. The cache never holds more than 2 images.
 function writeCache(date: string, dataUrl: string): void {
   try {
+    const curDate = localStorage.getItem(DATE_KEY);
+    const curData = localStorage.getItem(DATA_KEY);
+    if (curDate && curData && curData !== dataUrl) {
+      localStorage.setItem(PREV_DATE_KEY, curDate);
+      localStorage.setItem(PREV_DATA_KEY, curData);
+    }
     localStorage.setItem(DATE_KEY, date);
     localStorage.setItem(DATA_KEY, dataUrl);
   } catch {
@@ -172,10 +204,10 @@ export function useDailyBackdrop(timeZone: string | undefined): [string | null, 
       if (alive) setDataUrl(url);
     };
 
-    const refresh = async (cached: {
-      date: string | null;
-      dataUrl: string | null;
-    }) => {
+    // Clean up keys left by older versions on every launch.
+    purgeLegacyCaches();
+
+    const refresh = async (cached: BackdropCache) => {
       const day = today();
       if (cached.date === day && cached.dataUrl) {
         apply(cached.dataUrl);
@@ -186,7 +218,8 @@ export function useDailyBackdrop(timeZone: string | undefined): [string | null, 
         writeCache(day, fresh);
         apply(fresh);
       } catch {
-        apply(cached.dataUrl); // keep previous even if stale; none -> fallback
+        // keep previous even if stale; none -> fallback
+        apply(cached.dataUrl ?? cached.prevDataUrl);
       }
     };
 

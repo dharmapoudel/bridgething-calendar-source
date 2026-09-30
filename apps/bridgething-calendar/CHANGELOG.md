@@ -1,3 +1,7 @@
+## 0.2.32
+
+Background cache now holds at most 2 images: a new LRU scheme keeps only the current and previous backdrops (`unsplashBackdropDate/DataUrl` + `unsplashBackdropPrevDate/PrevDataUrl`), evicting older ones on every write. Startup purges the legacy Bing-era keys (`bingBackdropDate/DataUrl`) left by 0.2.21–0.2.23 so they stop occupying storage. Downloads stay at 800x480 (`w=800&h=480&fit=crop&q=80`), matching the Car Thing display — no full-resolution fetches.
+
 ## 0.2.31
 
 Removed the dead EPL feed (`https://www.fixturedownload.com/download/epl-2025-26-GMT.ics`, was 404ing) from the `ics_feeds` default, the App.tsx DEFAULT_FEEDS fallback, and the settings.html demo values. Defaults are now 5 feeds (Google US holidays, CalendarLabs US holidays, CalendarLabs Formula 1, CalendarLabs NFL, Google calendar); the other 5 URLs were verified live (HTTP 200) before release.
